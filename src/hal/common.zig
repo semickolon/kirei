@@ -2,19 +2,21 @@ pub fn Reg(comptime T: type) type {
     return packed struct {
         ptr: *volatile T,
 
-        pub fn get(comptime self: @This()) callconv(.Inline) T {
+        const Self = @This();
+
+        pub inline fn get(comptime self: Self) T {
             return self.ptr.*;
         }
 
-        pub fn set(comptime self: @This(), value: T) callconv(.Inline) void {
+        pub inline fn set(comptime self: Self, value: T) void {
             self.ptr.* = value;
         }
 
-        pub fn getBit(comptime self: @This(), comptime offset: comptime_int) callconv(.Inline) bool {
+        pub inline fn getBit(comptime self: Self, comptime offset: comptime_int) bool {
             return (self.ptr.* & (1 << offset)) != 0;
         }
 
-        pub fn setBit(comptime self: @This(), comptime offset: comptime_int, high: bool) void {
+        pub fn setBit(comptime self: Self, comptime offset: comptime_int, high: bool) void {
             if (high) {
                 self.ptr.* |= (1 << offset);
             } else {
@@ -22,7 +24,7 @@ pub fn Reg(comptime T: type) type {
             }
         }
 
-        pub fn toggleBit(comptime self: @This(), comptime offset: comptime_int) callconv(.Inline) void {
+        pub inline fn toggleBit(comptime self: Self, comptime offset: comptime_int) void {
             self.ptr.* ^= (1 << offset);
         }
     };
@@ -50,6 +52,7 @@ pub const safe_access_reg = packed struct {
     pub fn enable() void {
         reg.set(0x57);
         reg.set(0xA8);
+        safeOperate();
     }
 
     pub fn disable() void {
@@ -57,15 +60,20 @@ pub const safe_access_reg = packed struct {
     }
 };
 
-pub fn nop() callconv(.Inline) void {
+pub inline fn nop() void {
     asm volatile ("nop");
+}
+
+pub inline fn safeOperate() void {
+    nop();
+    nop();
 }
 
 const R16_POWER_PLAN = r16At(0x40001020);
 const RB_PWR_DCDC_PRE = 10;
 const RB_PWR_DCDC_EN = 9;
 
-pub fn useDcDc(comptime enable: bool) callconv(.Inline) void {
+pub inline fn useDcDc(comptime enable: bool) void {
     safe_access_reg.enable();
 
     R16_POWER_PLAN.setBit(RB_PWR_DCDC_PRE, enable);

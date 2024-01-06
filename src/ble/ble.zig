@@ -3,7 +3,12 @@ const c = @import("../lib/ch583.zig");
 const config = @import("../config.zig");
 const UUID = @import("../lib/uuid.zig").UUID;
 const tmos = @import("tmos.zig");
+
+const systick = @import("../hal/systick.zig");
 const rtc = @import("../hal/rtc.zig");
+const pmu = @import("../hal/pmu.zig");
+const interrupts = @import("../hal/interrupts.zig");
+
 const isp = @cImport(@cInclude("ISP583.h"));
 const n = @import("assigned_numbers.zig");
 
@@ -14,6 +19,10 @@ pub fn init() !void {
     try initBleModule();
     rtc.init();
     try tmos.init();
+
+    pmu.setWakeUpEvent(.rtc, true);
+    rtc.setTriggerMode(true);
+    interrupts.set(.rtc, true);
 }
 
 pub fn process() void {
@@ -37,9 +46,12 @@ fn initBleModule() !void {
     cfg.ConnectNumber =
         (config.ble.peripheral_max_connections & 3) | (config.ble.central_max_connections << 2);
 
-    cfg.srandCB = getRtcCount;
+    cfg.srandCB = getSysTickCount;
     cfg.rcCB = c.Lib_Calibration_LSI;
     cfg.MacAddr = config.ble.mac_addr;
+
+    cfg.WakeUpTime = 45; // 1400 us to RTC, whatever that means
+    cfg.sleepCB = enterSleep;
 
     const result = c.BLE_LibInit(&cfg);
 
@@ -71,8 +83,16 @@ fn libWriteFlash(addr: u32, num: u32, pBuf: [*c]u32) callconv(.C) u32 {
     return 0;
 }
 
-fn getRtcCount() callconv(.C) u32 {
-    return @truncate(rtc.count());
+fn getSysTickCount() callconv(.C) u32 {
+    return @truncate(systick.count());
+}
+
+fn enterSleep(time: u32) callconv(.C) u32 {
+    // TODO: Implement the real thing
+    _ = time;
+    interrupts.globalSet(false);
+    interrupts.globalSet(true);
+    return 2;
 }
 
 pub fn initPeripheralRole() !void {
