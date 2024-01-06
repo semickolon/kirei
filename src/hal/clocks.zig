@@ -32,7 +32,7 @@ const Reg8Ck32kCfg = packed struct {
 
 const SysClockSource = enum(u2) {
     ck32m = 0,
-    pll   = 1,
+    pll = 1,
     ck32k = 3,
 };
 
@@ -54,7 +54,7 @@ pub const SysClock = enum {
     pub fn clkSrc(comptime self: @This()) SysClockSource {
         return switch (self) {
             .xt32m_2_mhz, .xt32m_3_2_mhz, .xt32m_4_mhz, .xt32m_6_4_mhz, .xt32m_8_mhz => .ck32m,
-            .pll_20_mhz, .pll_24_mhz, .pll_30_mhz, .pll_32_mhz, .pll_48_mhz , .pll_60_mhz => .pll,
+            .pll_20_mhz, .pll_24_mhz, .pll_30_mhz, .pll_32_mhz, .pll_48_mhz, .pll_60_mhz => .pll,
             .xt32k, .int32k => .ck32k,
         };
     }

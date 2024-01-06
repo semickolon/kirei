@@ -3,14 +3,16 @@ const c = @import("../lib/ch583.zig");
 const config = @import("../config.zig");
 const UUID = @import("../lib/uuid.zig").UUID;
 const tmos = @import("tmos.zig");
+const rtc = @import("../hal/rtc.zig");
 const isp = @cImport(@cInclude("ISP583.h"));
 const n = @import("assigned_numbers.zig");
 
 var memBuf: [config.ble.mem_heap_size / 4]u32 align(4) = undefined;
-var cfg: c.bleConfig_t = undefined;
+var cfg = std.mem.zeroes(c.bleConfig_t);
 
 pub fn init() !void {
     try initBleModule();
+    rtc.init();
     try tmos.init();
 }
 
@@ -19,8 +21,6 @@ pub fn process() void {
 }
 
 fn initBleModule() !void {
-    c.tmos_memset(&cfg, 0, @sizeOf(c.bleConfig_t));
-
     cfg.MEMAddr = @intFromPtr(&memBuf);
     cfg.MEMLen = config.ble.mem_heap_size;
     cfg.BufMaxLen = config.ble.buf_max_len;
@@ -37,6 +37,7 @@ fn initBleModule() !void {
     cfg.ConnectNumber =
         (config.ble.peripheral_max_connections & 3) | (config.ble.central_max_connections << 2);
 
+    cfg.srandCB = getRtcCount;
     cfg.rcCB = c.Lib_Calibration_LSI;
     cfg.MacAddr = config.ble.mac_addr;
 
@@ -68,6 +69,10 @@ fn libWriteFlash(addr: u32, num: u32, pBuf: [*c]u32) callconv(.C) u32 {
     _ = isp.EEPROM_ERASE(cu32(addr), cu32(num * 4));
     _ = isp.EEPROM_WRITE(cu32(addr), pBuf, cu32(num * 4));
     return 0;
+}
+
+fn getRtcCount() callconv(.C) u32 {
+    return @truncate(rtc.count());
 }
 
 pub fn initPeripheralRole() !void {
