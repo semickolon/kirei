@@ -115,7 +115,7 @@ pub fn notify(conn_handle: u16, code: u8) void {
     report[2] = code;
 
     hid_report_ccc.notify(
-        [8]u8,
+        @TypeOf(report),
         conn_handle,
         attributes[10].handle,
         &report,

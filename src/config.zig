@@ -23,3 +23,9 @@ pub const sys = .{
     .clock = clocks.SysClock.pll_60_mhz,
     .led_1 = gpio.pins.A8,
 };
+
+pub const engine = .{
+    .callbacks = .{
+        .onHidWrite = @import("ble/ble_dev.zig").onHidWrite,
+    },
+};

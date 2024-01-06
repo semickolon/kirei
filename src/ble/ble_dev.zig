@@ -152,9 +152,9 @@ fn onTmosEvent(_: u8, events: u16) callconv(.C) u16 {
     return 0;
 }
 
-pub fn notify(code: u8) void {
+pub fn onHidWrite(code: u8, down: bool) void {
     if (conn_secure) {
-        HidService.notify(gap_conn_handle, code);
+        HidService.notify(gap_conn_handle, if (down) code else 0);
     }
 }
 
