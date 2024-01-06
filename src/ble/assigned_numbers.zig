@@ -1,0 +1,21 @@
+pub const DECL_PRIMARY_SERVICE: u16 = 0x2800;
+pub const DECL_SECONDARY_SERVICE: u16 = 0x2801;
+pub const DECL_INCLUDE: u16 = 0x2802;
+pub const DECL_CHARACTERISTIC: u16 = 0x2803;
+
+pub const DESC_CLIENT_CHAR_CONFIG: u16 = 0x2902;
+pub const DESC_REPORT_REF: u16 = 0x2908;
+
+pub const SERVICE_BATTERY: u16 = 0x180F;
+pub const SERVICE_DEVICE_INFO: u16 = 0x180A;
+pub const SERVICE_HID: u16 = 0x1812;
+
+pub const CHAR_BATTERY_LEVEL: u16 = 0x2A19;
+
+pub const CHAR_SYSTEM_ID: u16 = 0x2A23;
+
+pub const CHAR_HID_INFORMATION: u16 = 0x2A4A;
+pub const CHAR_HID_REPORT_MAP: u16 = 0x2A4B;
+pub const CHAR_HID_CONTROL_POINT: u16 = 0x2A4C;
+pub const CHAR_HID_REPORT: u16 = 0x2A4D;
+pub const CHAR_HID_PROTOCOL_MODE: u16 = 0x2A4E;
