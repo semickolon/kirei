@@ -9,7 +9,7 @@ const REPORT_ID_MAIN = 1;
 var hid_protocol_mode: HidProtocolMode = .report;
 var hid_report_ccc = ble.ClientCharCfg{};
 
-var report = [8]u8{ 0, 0, 0, 0, 0, 0, 0, 0 };
+var report = [_]u8{0} ** 8;
 
 const HidInfo = packed struct {
     bcd_hid: u16 = 0x0111, // 1.11

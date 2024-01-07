@@ -1,4 +1,9 @@
+const std = @import("std");
 const c = @import("../lib/ch583.zig");
+const config = @import("../config.zig");
+
+const n = @import("assigned_numbers.zig");
+const bleDataBytes = @import("utils.zig").bleDataBytes;
 
 const DeviceInfoService = @import("dev_info_service.zig");
 const BatteryService = @import("battery_service.zig");
@@ -19,67 +24,26 @@ const mitm: u8 = c.TRUE;
 const io_cap: u8 = c.GAPBOND_IO_CAP_NO_INPUT_NO_OUTPUT;
 const bonding: u8 = c.TRUE;
 
-fn Data(comptime T: type) type {
-    return packed struct {
-        length: u8 = @sizeOf(u8) + @sizeOf(T),
-        data_type: u8,
-        value: T,
-    };
-}
+const scan_rsp_data = bleDataBytes(.{
+    c.GAP_ADTYPE_LOCAL_NAME_COMPLETE,       config.ble.name,
+    c.GAP_ADTYPE_SLAVE_CONN_INTERVAL_RANGE, &[2]u16{ config.ble.conn_interval_min, config.ble.conn_interval_max },
+    c.GAP_ADTYPE_POWER_LEVEL,               &@as(u8, 0),
+});
 
-const name: packed struct {
-    a: u8,
-    b: u8,
-    c: u8,
-    d: u8,
-    e: u8,
-} = .{
-    .a = 'A',
-    .b = 'b',
-    .c = 'n',
-    .d = 'o',
-    .e = '.',
-};
-
-const advert_data: packed struct {
-    flags: Data(u8),
-    appearance: Data(u16),
-} = .{
-    .flags = .{
-        .data_type = c.GAP_ADTYPE_FLAGS,
-        .value = c.GAP_ADTYPE_FLAGS_LIMITED | c.GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED,
-    },
-    .appearance = .{
-        .data_type = c.GAP_ADTYPE_APPEARANCE,
-        .value = c.GAP_APPEARE_HID_KEYBOARD,
-    },
-};
-
-const scan_rsp_data: packed struct {
-    name: Data(@TypeOf(name)), // TODO: Actual strings
-    conn_interval_range: Data(packed struct { min: u16, max: u16 }),
-    services: Data(packed struct { a: u16, b: u16 }),
-    power_level: Data(u8),
-} = .{
-    .name = .{
-        .data_type = c.GAP_ADTYPE_LOCAL_NAME_COMPLETE,
-        .value = name,
-    },
-    .conn_interval_range = .{
-        .data_type = c.GAP_ADTYPE_SLAVE_CONN_INTERVAL_RANGE,
-        .value = .{ .min = 8, .max = 8 },
-    },
-    .services = .{
-        .data_type = c.GAP_ADTYPE_16BIT_MORE,
-        .value = .{ .a = 0x1812, .b = 0x180F },
-    },
-    .power_level = .{
-        .data_type = c.GAP_ADTYPE_POWER_LEVEL,
-        .value = 0,
-    },
-};
+const advert_data = bleDataBytes(.{
+    c.GAP_ADTYPE_FLAGS,      &(c.GAP_ADTYPE_FLAGS_LIMITED | c.GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED),
+    c.GAP_ADTYPE_APPEARANCE, &c.GAP_APPEARE_HID_KEYBOARD,
+    c.GAP_ADTYPE_16BIT_MORE, &[_]u16{ n.SERVICE_HID, n.SERVICE_BATTERY },
+});
 
 pub fn init() void {
+    if (scan_rsp_data.len > 31) {
+        @compileError("scan_rsp_data is longer than max of 31 bytes.");
+    }
+    if (advert_data.len > 31) {
+        @compileError("advert_data is longer than max of 31 bytes.");
+    }
+
     task_id = c.TMOS_ProcessEventRegister(onTmosEvent);
 
     _ = c.GAPBondMgr_SetParameter(c.GAPBOND_AUTO_SYNC_WL, @sizeOf(u8), @constCast(&c.TRUE));
@@ -95,10 +59,10 @@ pub fn init() void {
 
     // HidEmu_Init
     _ = c.GAPRole_SetParameter(c.GAPROLE_ADVERT_ENABLED, @sizeOf(u8), @constCast(&c.TRUE));
-    _ = c.GAPRole_SetParameter(c.GAPROLE_ADVERT_DATA, @sizeOf(@TypeOf(advert_data)), @constCast(&advert_data));
-    _ = c.GAPRole_SetParameter(c.GAPROLE_SCAN_RSP_DATA, @sizeOf(@TypeOf(scan_rsp_data)), @constCast(&scan_rsp_data));
+    _ = c.GAPRole_SetParameter(c.GAPROLE_ADVERT_DATA, advert_data.len, @constCast(&advert_data));
+    _ = c.GAPRole_SetParameter(c.GAPROLE_SCAN_RSP_DATA, scan_rsp_data.len, @constCast(&scan_rsp_data));
 
-    _ = c.GGS_SetParameter(c.GGS_DEVICE_NAME_ATT, 5, @constCast(@ptrCast("Abno.")));
+    _ = c.GGS_SetParameter(c.GGS_DEVICE_NAME_ATT, config.ble.name.len, @constCast(@ptrCast(config.ble.name)));
 
     // GAP Bond Manager
     _ = c.GAPBondMgr_SetParameter(c.GAPBOND_PERI_DEFAULT_PASSCODE, @sizeOf(u32), @constCast(&pass_key));
@@ -139,8 +103,8 @@ fn onTmosEvent(_: u8, events: u16) callconv(.C) u16 {
     if (events & START_PARAM_UPDATE_EVT != 0) {
         _ = c.GAPRole_PeripheralConnParamUpdateReq(
             gap_conn_handle,
-            8,
-            8,
+            config.ble.conn_interval_min,
+            config.ble.conn_interval_max,
             0,
             500,
             task_id,

@@ -14,7 +14,7 @@ const Reg16ClkSysCfg = packed struct(u16) {
 };
 
 const Reg8HfckPwrCtrl = packed struct(u8) {
-    __R0: bool,
+    __R0: u2,
     xt32m_power_on: bool,
     xt32m_keep: bool,
     pll_power_on: bool,

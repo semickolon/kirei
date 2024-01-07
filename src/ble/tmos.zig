@@ -8,7 +8,3 @@ pub fn init() !void {
         return error.Failure;
     }
 }
-
-// pub fn register() TmosTaskId {
-//     return c.TMOS_ProcessEventRegister();
-// }
