@@ -1,35 +1,34 @@
 const std = @import("std");
 
-const gpio = @import("hal/gpio.zig");
 const engine = @import("core/engine.zig");
+const config = @import("config.zig");
 
-const P = gpio.pins;
-const matrix_cols = [_]type{ P.B15, P.B14 };
-const matrix_rows = [_]type{ P.B7, P.B4 };
+const key_count = config.engine.key_map.len;
+const matrix = config.kscan.matrix;
 
 const PhysicalKeyState = packed struct {
     debounce_counter: u2 = 0,
 };
 
-var key_states: [4]PhysicalKeyState = .{.{}} ** 4;
+var key_states: [key_count]PhysicalKeyState = .{.{}} ** key_count;
 
 pub fn init() void {
-    inline for (matrix_cols) |col| {
+    inline for (matrix.cols) |col| {
         col.config(.output);
     }
 
-    inline for (matrix_rows) |row| {
+    inline for (matrix.rows) |row| {
         row.config(.input_pull_down);
     }
 }
 
 pub fn scan() void {
-    inline for (matrix_cols, 0..) |col, i| {
+    inline for (matrix.cols, 0..) |col, i| {
         col.write(true);
         colSwitchDelay();
 
-        inline for (matrix_rows, 0..) |row, j| {
-            const key_idx = (j * matrix_cols.len) + i;
+        inline for (matrix.rows, 0..) |row, j| {
+            const key_idx = (j * matrix.cols.len) + i;
             const ks = &key_states[key_idx];
 
             if (row.read()) {
@@ -48,11 +47,12 @@ pub fn scan() void {
         }
 
         col.write(false);
+        colSwitchDelay();
     }
 }
 
 fn colSwitchDelay() void {
-    inline for (0..4) |_| {
+    inline for (0..8) |_| {
         asm volatile ("nop");
     }
 }

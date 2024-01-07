@@ -1,17 +1,15 @@
 const std = @import("std");
 
-const engine = @import("../config.zig").engine;
+const config = @import("../config.zig");
 
 const KeyState = packed struct {
     down: bool = false,
 };
 
-const KEY_COUNT = 4;
+const KEY_COUNT = config.engine.key_map.len;
 
-const key_map = [KEY_COUNT]u8{
-    0x09, 0x04,
-    0x0E, 0x37,
-};
+const key_map = config.engine.key_map;
+const callbacks = config.engine.callbacks;
 
 var key_states: [KEY_COUNT]KeyState = .{.{}} ** KEY_COUNT;
 
@@ -36,7 +34,7 @@ const KeyboardHidOutput = struct {
             byte.* &= ~bit;
         }
 
-        engine.callbacks.onHidWrite(code, down);
+        callbacks.onHidWrite(code, down);
     }
 };
 
