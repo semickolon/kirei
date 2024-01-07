@@ -131,12 +131,19 @@ fn onGapStateChange(new_state: c.gapRole_States_t, event: [*c]c.gapRoleEvent_t) 
         gap_conn_handle = link_req_event.connectionHandle;
         conn_secure = false;
 
-        _ = c.GAPRole_SetParameter(c.GAPROLE_ADVERT_ENABLED, @sizeOf(u8), @constCast(&c.FALSE));
+        setAdvertising(false);
 
         _ = c.tmos_start_task(task_id, START_PARAM_UPDATE_EVT, 2800);
     } else if (gap_state == c.GAPROLE_CONNECTED and new_state != c.GAPROLE_CONNECTED) {
-        // TODO: Disconnected
+        conn_secure = false;
+        gap_conn_handle = c.GAP_CONNHANDLE_INIT;
+
+        setAdvertising(true);
     }
+}
+
+fn setAdvertising(enabled: bool) void {
+    _ = c.GAPRole_SetParameter(c.GAPROLE_ADVERT_ENABLED, @sizeOf(u8), @constCast(&@intFromBool(enabled)));
 }
 
 fn onGapPairStateChange(conn_handle: u16, state: u8, status: u8) callconv(.C) void {

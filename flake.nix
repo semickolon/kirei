@@ -1,5 +1,5 @@
 {
-  description = "fak-ch58";
+  description = "fak-kiwi";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -28,8 +28,8 @@
             };
           in
           with pkgs; [
-          	zig
-          	zls
+            zig
+            zls
             wchisp
           ];
       };

@@ -15,4 +15,4 @@ Requirements:
 ## Flashing
 
 1. `zig build`
-2. `wchisp flash zig-out/bin/fak-ch58`
+2. `wchisp flash zig-out/bin/fak-kiwi`

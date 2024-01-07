@@ -12,7 +12,7 @@ pub fn build(b: *std.Build) void {
     const optimize = std.builtin.OptimizeMode.ReleaseSmall;
 
     const exe = b.addExecutable(.{
-        .name = "fak-ch58",
+        .name = "fak-kiwi",
         .root_source_file = .{ .path = "src/main.zig" },
         .target = target,
         .optimize = optimize,
