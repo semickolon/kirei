@@ -61,13 +61,3 @@ pub fn globalSet(comptime enabled: bool) void {
         IENR.* = isr_backup;
     }
 }
-
-fn interruptReturn() noreturn {
-    asm volatile ("mret");
-    unreachable;
-}
-
-export fn RTC_IRQHandler() noreturn {
-    rtc.clearFlags();
-    interruptReturn();
-}

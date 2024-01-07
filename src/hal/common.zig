@@ -64,20 +64,17 @@ pub inline fn nop() void {
     asm volatile ("nop");
 }
 
+pub inline fn mret() noreturn {
+    asm volatile ("mret");
+    unreachable;
+}
+
+pub inline fn wfi() void {
+    asm volatile ("wfi");
+    safeOperate();
+}
+
 pub inline fn safeOperate() void {
     nop();
     nop();
-}
-
-const R16_POWER_PLAN = r16At(0x40001020);
-const RB_PWR_DCDC_PRE = 10;
-const RB_PWR_DCDC_EN = 9;
-
-pub inline fn useDcDc(comptime enable: bool) void {
-    safe_access_reg.enable();
-
-    R16_POWER_PLAN.setBit(RB_PWR_DCDC_PRE, enable);
-    R16_POWER_PLAN.setBit(RB_PWR_DCDC_EN, enable);
-
-    safe_access_reg.disable();
 }

@@ -19,7 +19,12 @@ const ModeCtrl = packed struct(u8) {
 
 const flag_ctrl: *volatile FlagCtrl = @ptrFromInt(0x40001030);
 const mode_ctrl: *volatile ModeCtrl = @ptrFromInt(0x40001031);
+const count_32k: *volatile u32 = @ptrFromInt(0x40001038);
 const trig_value: *volatile u32 = @ptrFromInt(0x40001034);
+
+pub const MAX_CYCLE_32K: u32 = 0xA8C00000;
+
+var trigger_time_activated = false;
 
 pub fn init() void {
     setTime(0, 0, 0);
@@ -39,6 +44,21 @@ pub fn setTime(day: u14, sec2: u16, khz32: u16) void {
     common.safe_access_reg.disable();
 }
 
+// TODO: Better naming. This isn't exactly the get version of `setTime`
+// Gets RTC 32k cycle
+pub fn getTime() u32 {
+    var _t: u32 = undefined;
+    var time: *volatile u32 = @ptrCast(&_t);
+
+    // This is how it's done by the manufacturer.
+    // I'm not sure why it has to do this, but maybe it's trying to get a stable value?
+    while (time.* != count_32k.*) {
+        time.* = count_32k.*;
+    }
+
+    return time.*;
+}
+
 pub fn setTimingMode(enabled: bool) void {
     common.safe_access_reg.enable();
     mode_ctrl.timing_mode_enable = enabled;
@@ -53,11 +73,19 @@ pub fn setTriggerMode(enabled: bool) void {
 
 pub fn setTriggerTime(time: u32) void {
     common.safe_access_reg.enable();
-    trig_value.* = time;
+    trig_value.* = time % MAX_CYCLE_32K;
     common.safe_access_reg.disable();
+    trigger_time_activated = false;
 }
 
-pub fn clearFlags() void {
+pub fn isTriggerTimeActivated() bool {
+    return trigger_time_activated;
+}
+
+export fn RTC_IRQHandler() callconv(.Naked) noreturn {
+    defer common.mret();
+
     flag_ctrl.timing_clear = true;
     flag_ctrl.trigger_clear = true;
+    trigger_time_activated = true;
 }

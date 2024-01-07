@@ -4,14 +4,14 @@ const ble_dev = @import("ble/ble_dev.zig");
 const config = @import("config.zig");
 const kscan = @import("kscan.zig");
 
-const common = @import("hal/common.zig");
+const pmu = @import("hal/pmu.zig");
 const clocks = @import("hal/clocks.zig");
 const gpio = @import("hal/gpio.zig");
 
 const led_1 = config.sys.led_1;
 
 pub fn main() noreturn {
-    common.useDcDc(true);
+    pmu.useDcDc(true);
 
     clocks.use(config.sys.clock);
     clocks.useXt32k(false);

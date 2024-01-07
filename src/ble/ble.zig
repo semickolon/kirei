@@ -15,6 +15,12 @@ const n = @import("assigned_numbers.zig");
 var memBuf: [config.ble.mem_heap_size / 4]u32 align(4) = undefined;
 var cfg = std.mem.zeroes(c.bleConfig_t);
 
+const WAKE_UP_RTC_MAX_TIME = 45; // ~1.4ms in 32KHz RTC cycles
+
+// Are these sleep min, max values just by choice or is it the chip's limitations?
+const SLEEP_RTC_MIN_TIME = 33; // ~1ms
+const SLEEP_RTC_MAX_TIME = 2715440914; // RTC max 32K cycle (idk how long this is yet) minus 1hr
+
 pub fn init() !void {
     try initBleModule();
     rtc.init();
@@ -50,7 +56,7 @@ fn initBleModule() !void {
     cfg.rcCB = c.Lib_Calibration_LSI;
     cfg.MacAddr = config.ble.mac_addr;
 
-    cfg.WakeUpTime = 45; // 1.4ms in 32KHz RTC cycles
+    cfg.WakeUpTime = WAKE_UP_RTC_MAX_TIME;
     cfg.sleepCB = enterSleep;
 
     const result = c.BLE_LibInit(&cfg);
@@ -92,10 +98,43 @@ fn enterSleep(time: u32) callconv(.C) u32 {
         interrupts.globalSet(false);
         defer interrupts.globalSet(true);
 
+        // TODO: This is so C. Let's represent time units like `Duration` in Rust.
+        const time_curr = rtc.getTime();
+        const sleep_dur = if (time < time_curr)
+            time + (rtc.MAX_CYCLE_32K - time_curr)
+        else
+            time - time_curr;
+
+        if (sleep_dur < SLEEP_RTC_MIN_TIME or sleep_dur > SLEEP_RTC_MAX_TIME) {
+            return 2;
+        }
+
         rtc.setTriggerTime(time);
     }
 
-    pmu.sleepIdle();
+    // There's a possibility that, right here, RTC interrupt may have just been triggered.
+    // In that case, there's no more need to sleep. We return early to prevent sleeping.
+    if (rtc.isTriggerTimeActivated() and false) {
+        return 3; // No documentation on what 3 means.
+    }
+
+    pmu.sleepDeep(.{
+        .ram_2k = true,
+        .ram_30k = true,
+        .extend = true,
+    });
+
+    if (!rtc.isTriggerTimeActivated()) {
+        // We're woken up by something *other than* the RTC interrupt.
+        // In this case, the 32MHz oscillator is not stable right now.
+        // We need to sleep idle (non-deep) for a bit and let it stabilize.
+        rtc.setTriggerTime(time +% WAKE_UP_RTC_MAX_TIME);
+        pmu.sleepIdle();
+    }
+
+    // TODO: Something about HSE current for stability? Not sure.
+    // HSECFG_Current(HSE_RCur_100);
+
     config.sys.led_1.toggle();
     return 0;
 }
