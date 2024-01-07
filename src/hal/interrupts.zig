@@ -59,3 +59,14 @@ pub fn globalSet(comptime enabled: bool) void {
         IENR.* = isr_backup;
     }
 }
+
+fn interruptReturn() noreturn {
+    asm volatile ("mret");
+    unreachable;
+}
+
+export fn RTC_IRQHandler() noreturn {
+    // R8_RTC_FLAG_CTRL = (RB_RTC_TMR_CLR | RB_RTC_TRIG_CLR);
+    @as(*volatile u8, @ptrFromInt(0x40001030)).* = 48;
+    interruptReturn();
+}

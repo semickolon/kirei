@@ -50,7 +50,7 @@ fn initBleModule() !void {
     cfg.rcCB = c.Lib_Calibration_LSI;
     cfg.MacAddr = config.ble.mac_addr;
 
-    cfg.WakeUpTime = 45; // 1400 us to RTC, whatever that means
+    cfg.WakeUpTime = 45; // 1.4ms in 32KHz RTC cycles
     cfg.sleepCB = enterSleep;
 
     const result = c.BLE_LibInit(&cfg);
@@ -88,11 +88,16 @@ fn getSysTickCount() callconv(.C) u32 {
 }
 
 fn enterSleep(time: u32) callconv(.C) u32 {
-    // TODO: Implement the real thing
-    _ = time;
-    interrupts.globalSet(false);
-    interrupts.globalSet(true);
-    return 2;
+    {
+        interrupts.globalSet(false);
+        defer interrupts.globalSet(true);
+
+        rtc.setTriggerTime(time);
+    }
+
+    pmu.sleepIdle();
+    config.sys.led_1.toggle();
+    return 0;
 }
 
 pub fn initPeripheralRole() !void {

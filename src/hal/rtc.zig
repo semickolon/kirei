@@ -41,3 +41,9 @@ pub fn setTriggerMode(enabled: bool) void {
     mode_ctrl.trigger_mode_enable = enabled;
     common.safe_access_reg.disable();
 }
+
+pub fn setTriggerTime(time: u32) void {
+    common.safe_access_reg.enable();
+    trig_value.* = time;
+    common.safe_access_reg.disable();
+}

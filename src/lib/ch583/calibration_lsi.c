@@ -17,9 +17,6 @@ typedef struct __attribute__((packed))
 } SysTick_Type;
 
 #define SysTick                 ((SysTick_Type *)0xE000F000)
-
-tmosTaskID halTaskID = INVALID_TASK_ID;
-
 #define SysTick_LOAD_RELOAD_Msk    (0xFFFFFFFFFFFFFFFF)
 #define SysTick_CTLR_INIT          (1 << 5)
 #define SysTick_CTLR_MODE          (1 << 4)
