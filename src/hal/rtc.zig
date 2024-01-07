@@ -19,8 +19,8 @@ const ModeCtrl = packed struct(u8) {
 
 const flag_ctrl: *volatile FlagCtrl = @ptrFromInt(0x40001030);
 const mode_ctrl: *volatile ModeCtrl = @ptrFromInt(0x40001031);
-const count_32k: *volatile u32 = @ptrFromInt(0x40001038);
-const trig_value: *volatile u32 = @ptrFromInt(0x40001034);
+const count_32k = common.Reg32(0x40001038);
+const trig_value = common.Reg32(0x40001034);
 
 pub const MAX_CYCLE_32K: u32 = 0xA8C00000;
 
@@ -31,17 +31,17 @@ pub fn init() void {
 }
 
 pub fn setTime(day: u14, sec2: u16, khz32: u16) void {
-    common.safe_access_reg.enable();
-    trig_value.* = day;
+    common.safe_access.enable();
+    trig_value.set(day);
     mode_ctrl.load_high_word = true;
     // Wait until actually set
-    while (day != @as(@TypeOf(day), @truncate(trig_value.*))) {}
+    while (day != @as(@TypeOf(day), @truncate(trig_value.get()))) {}
 
-    common.safe_access_reg.enable();
-    trig_value.* = (@as(u32, sec2) << 16) | khz32;
+    common.safe_access.enable();
+    trig_value.set((@as(u32, sec2) << 16) | khz32);
     mode_ctrl.load_low_word = true;
 
-    common.safe_access_reg.disable();
+    common.safe_access.disable();
 }
 
 // TODO: Better naming. This isn't exactly the get version of `setTime`
@@ -52,29 +52,29 @@ pub fn getTime() u32 {
 
     // This is how it's done by the manufacturer.
     // I'm not sure why it has to do this, but maybe it's trying to get a stable value?
-    while (time.* != count_32k.*) {
-        time.* = count_32k.*;
+    while (time.* != count_32k.get()) {
+        time.* = count_32k.get();
     }
 
     return time.*;
 }
 
 pub fn setTimingMode(enabled: bool) void {
-    common.safe_access_reg.enable();
+    common.safe_access.enable();
     mode_ctrl.timing_mode_enable = enabled;
-    common.safe_access_reg.disable();
+    common.safe_access.disable();
 }
 
 pub fn setTriggerMode(enabled: bool) void {
-    common.safe_access_reg.enable();
+    common.safe_access.enable();
     mode_ctrl.trigger_mode_enable = enabled;
-    common.safe_access_reg.disable();
+    common.safe_access.disable();
 }
 
 pub fn setTriggerTime(time: u32) void {
-    common.safe_access_reg.enable();
-    trig_value.* = time % MAX_CYCLE_32K;
-    common.safe_access_reg.disable();
+    common.safe_access.enable();
+    trig_value.set(time % MAX_CYCLE_32K);
+    common.safe_access.disable();
     trigger_time_activated = false;
 }
 

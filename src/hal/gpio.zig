@@ -1,35 +1,30 @@
 const common = @import("common.zig");
-const r32At = common.r32At;
-const r32 = common.r32;
+const Reg32 = common.Reg32;
 
 const ports = .{
-    .a = Port {
-        .registers = .{
-            .dir = r32At(0x400010A0),
-            .pin = r32At(0x400010A4),
-            .out = r32At(0x400010A8),
-            .pu = r32At(0x400010B0),
-            .pd_drv = r32At(0x400010B4),
-        }
-    },
-    .b = Port {
-        .registers = .{
-            .dir = r32At(0x400010C0),
-            .pin = r32At(0x400010C4),
-            .out = r32At(0x400010C8),
-            .pu = r32At(0x400010D0),
-            .pd_drv = r32At(0x400010D4),
-        }
-    },
+    .a = Port{ .registers = .{
+        .dir = Reg32(0x400010A0),
+        .pin = Reg32(0x400010A4),
+        .out = Reg32(0x400010A8),
+        .pu = Reg32(0x400010B0),
+        .pd_drv = Reg32(0x400010B4),
+    } },
+    .b = Port{ .registers = .{
+        .dir = Reg32(0x400010C0),
+        .pin = Reg32(0x400010C4),
+        .out = Reg32(0x400010C8),
+        .pu = Reg32(0x400010D0),
+        .pd_drv = Reg32(0x400010D4),
+    } },
 };
 
-const Port = packed struct {
-    registers: packed struct {
-        dir: r32,
-        pin: r32,
-        out: r32,
-        pu: r32,
-        pd_drv: r32,
+const Port = struct {
+    registers: struct {
+        dir: type,
+        pin: type,
+        out: type,
+        pu: type,
+        pd_drv: type,
     },
 };
 
@@ -81,17 +76,17 @@ fn Pin(comptime port: Port, comptime num: u5) type {
     };
 }
 
-pub const pins = packed struct {
-    pub const A0  = Pin(ports.a, 0);
-    pub const A1  = Pin(ports.a, 1);
-    pub const A2  = Pin(ports.a, 2);
-    pub const A3  = Pin(ports.a, 3);
-    pub const A4  = Pin(ports.a, 4);
-    pub const A5  = Pin(ports.a, 5);
-    pub const A6  = Pin(ports.a, 6);
-    pub const A7  = Pin(ports.a, 7);
-    pub const A8  = Pin(ports.a, 8);
-    pub const A9  = Pin(ports.a, 9);
+pub const pins = struct {
+    pub const A0 = Pin(ports.a, 0);
+    pub const A1 = Pin(ports.a, 1);
+    pub const A2 = Pin(ports.a, 2);
+    pub const A3 = Pin(ports.a, 3);
+    pub const A4 = Pin(ports.a, 4);
+    pub const A5 = Pin(ports.a, 5);
+    pub const A6 = Pin(ports.a, 6);
+    pub const A7 = Pin(ports.a, 7);
+    pub const A8 = Pin(ports.a, 8);
+    pub const A9 = Pin(ports.a, 9);
     pub const A10 = Pin(ports.a, 10);
     pub const A11 = Pin(ports.a, 11);
     pub const A12 = Pin(ports.a, 12);
@@ -99,16 +94,16 @@ pub const pins = packed struct {
     pub const A14 = Pin(ports.a, 14);
     pub const A15 = Pin(ports.a, 15);
 
-    pub const B0  = Pin(ports.b, 0);
-    pub const B1  = Pin(ports.b, 1);
-    pub const B2  = Pin(ports.b, 2);
-    pub const B3  = Pin(ports.b, 3);
-    pub const B4  = Pin(ports.b, 4);
-    pub const B5  = Pin(ports.b, 5);
-    pub const B6  = Pin(ports.b, 6);
-    pub const B7  = Pin(ports.b, 7);
-    pub const B8  = Pin(ports.b, 8);
-    pub const B9  = Pin(ports.b, 9);
+    pub const B0 = Pin(ports.b, 0);
+    pub const B1 = Pin(ports.b, 1);
+    pub const B2 = Pin(ports.b, 2);
+    pub const B3 = Pin(ports.b, 3);
+    pub const B4 = Pin(ports.b, 4);
+    pub const B5 = Pin(ports.b, 5);
+    pub const B6 = Pin(ports.b, 6);
+    pub const B7 = Pin(ports.b, 7);
+    pub const B8 = Pin(ports.b, 8);
+    pub const B9 = Pin(ports.b, 9);
     pub const B10 = Pin(ports.b, 10);
     pub const B11 = Pin(ports.b, 11);
     pub const B12 = Pin(ports.b, 12);

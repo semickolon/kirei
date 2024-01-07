@@ -1,53 +1,49 @@
-pub fn Reg(comptime T: type) type {
-    return packed struct {
-        ptr: *volatile T,
+pub fn Reg(comptime T: type, comptime address: u32) type {
+    return struct {
+        const ptr: *volatile T = @ptrFromInt(address);
 
         const Self = @This();
 
-        pub inline fn get(comptime self: Self) T {
-            return self.ptr.*;
+        pub inline fn get() T {
+            return ptr.*;
         }
 
-        pub inline fn set(comptime self: Self, value: T) void {
-            self.ptr.* = value;
+        pub inline fn set(value: T) void {
+            ptr.* = value;
         }
 
-        pub inline fn getBit(comptime self: Self, comptime offset: comptime_int) bool {
-            return (self.ptr.* & (1 << offset)) != 0;
+        pub inline fn getBit(comptime offset: comptime_int) bool {
+            return (ptr.* & (1 << offset)) != 0;
         }
 
-        pub fn setBit(comptime self: Self, comptime offset: comptime_int, high: bool) void {
+        pub inline fn setBit(comptime offset: comptime_int, high: bool) void {
             if (high) {
-                self.ptr.* |= (1 << offset);
+                ptr.* |= (1 << offset);
             } else {
-                self.ptr.* &= ~@as(T, 1 << offset);
+                ptr.* &= ~@as(T, 1 << offset);
             }
         }
 
-        pub inline fn toggleBit(comptime self: Self, comptime offset: comptime_int) void {
-            self.ptr.* ^= (1 << offset);
+        pub inline fn toggleBit(comptime offset: comptime_int) void {
+            ptr.* ^= (1 << offset);
         }
     };
 }
 
-pub const r32 = Reg(u32);
-pub const r16 = Reg(u16);
-pub const r8 = Reg(u8);
-
-pub fn r32At(comptime address: u32) r32 {
-    return .{ .ptr = @as(*volatile u32, @ptrFromInt(address)) };
+pub fn Reg32(comptime address: u32) type {
+    return Reg(u32, address);
 }
 
-pub fn r16At(comptime address: u32) r16 {
-    return .{ .ptr = @as(*volatile u16, @ptrFromInt(address)) };
+pub fn Reg16(comptime address: u32) type {
+    return Reg(u16, address);
 }
 
-pub fn r8At(comptime address: u32) r8 {
-    return .{ .ptr = @as(*volatile u8, @ptrFromInt(address)) };
+pub fn Reg8(comptime address: u32) type {
+    return Reg(u8, address);
 }
 
-pub const safe_access_reg = packed struct {
-    const reg = r8At(0x40001040);
+pub const safe_access = struct {
+    const reg = Reg8(0x40001040);
 
     pub fn enable() void {
         reg.set(0x57);

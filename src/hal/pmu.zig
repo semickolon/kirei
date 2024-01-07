@@ -54,16 +54,16 @@ const power_plan: *volatile PowerPlan = @ptrFromInt(0x40001020);
 const pfic_sys_ctrl: *volatile PficSysCtrl = @ptrFromInt(0xE000ED10);
 
 pub inline fn useDcDc(enable: bool) void {
-    common.safe_access_reg.enable();
-    defer common.safe_access_reg.disable();
+    common.safe_access.enable();
+    defer common.safe_access.disable();
 
     power_plan.dcdc_enable = enable;
     power_plan.dcdc_pre = enable;
 }
 
 pub fn setWakeUpEvent(event: enum { usb, usb2, rtc, gpio, batt }, enabled: bool) void {
-    common.safe_access_reg.enable();
-    defer common.safe_access_reg.disable();
+    common.safe_access.enable();
+    defer common.safe_access.disable();
 
     switch (event) {
         .usb => sleep_wake_ctrl.usb = enabled,
@@ -99,7 +99,7 @@ pub fn sleepDeep(req_power_plan: PowerPlan) void {
     new_power_plan.enable = true;
 
     common.nop();
-    common.safe_access_reg.enable();
+    common.safe_access.enable();
 
     sleep_power_ctrl.aux_low_power = true;
     power_plan.* = new_power_plan;
@@ -107,5 +107,5 @@ pub fn sleepDeep(req_power_plan: PowerPlan) void {
     common.wfi();
     // TODO: Delay 70us here
 
-    common.safe_access_reg.disable();
+    common.safe_access.disable();
 }

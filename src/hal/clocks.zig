@@ -1,33 +1,33 @@
 const common = @import("common.zig");
-const safe_access_reg = common.safe_access_reg;
+const safe_access = common.safe_access;
 
-const clk_sys_cfg = @as(*volatile Reg16ClkSysCfg, @ptrFromInt(0x40001008));
-const hfck_pwr_ctrl = @as(*volatile Reg8HfckPwrCtrl, @ptrFromInt(0x4000100A));
-const ck32k_cfg = @as(*volatile Reg8Ck32kCfg, @ptrFromInt(0x4000102F));
-const reg_analog_ie = common.r16At(0x4000101A);
+const clk_sys_cfg: *volatile Reg16ClkSysCfg = @ptrFromInt(0x40001008);
+const hfck_pwr_ctrl: *volatile Reg8HfckPwrCtrl = @ptrFromInt(0x4000100A);
+const ck32k_cfg: *volatile Reg8Ck32kCfg = @ptrFromInt(0x4000102F);
+const analog_ie = common.Reg16(0x4000101A);
 
-const Reg16ClkSysCfg = packed struct {
+const Reg16ClkSysCfg = packed struct(u16) {
     freq_div: u5,
-    __R0: u1,
+    __R0: bool,
     clk_src: SysClockSource,
     __R1: u8,
 };
 
-const Reg8HfckPwrCtrl = packed struct {
-    __R0: u1,
-    xt32m_power_on: u1,
-    xt32m_keep: u1,
-    pll_power_on: u1,
+const Reg8HfckPwrCtrl = packed struct(u8) {
+    __R0: bool,
+    xt32m_power_on: bool,
+    xt32m_keep: bool,
+    pll_power_on: bool,
     __R1: u3,
 };
 
-const Reg8Ck32kCfg = packed struct {
-    xt_power_on: u1,
-    int_power_on: u1,
-    xt_use: u1,
-    int_filter: u1,
+const Reg8Ck32kCfg = packed struct(u8) {
+    xt_power_on: bool,
+    int_power_on: bool,
+    xt_use: bool,
+    int_filter: bool,
     __R0: u3,
-    clk_pin: u1,
+    clk_pin: bool,
 };
 
 const SysClockSource = enum(u2) {
@@ -98,12 +98,12 @@ pub fn use(comptime sys_clock: SysClock) void {
     const clk_src = sys_clock.clkSrc();
     const freq_div = sys_clock.freqDiv();
 
-    safe_access_reg.enable();
+    safe_access.enable();
 
     clk_sys_cfg.clk_src = clk_src;
     clk_sys_cfg.freq_div = freq_div;
 
-    hfck_pwr_ctrl.pll_power_on = @bitCast(clk_src == .pll);
+    hfck_pwr_ctrl.pll_power_on = clk_src == .pll;
 
     if (sys_clock == .xt32k) {
         useXt32k(true);
@@ -111,13 +111,13 @@ pub fn use(comptime sys_clock: SysClock) void {
         useXt32k(false);
     }
 
-    safe_access_reg.disable();
+    safe_access.disable();
 }
 
 pub fn useXt32k(comptime enable: bool) void {
-    ck32k_cfg.xt_power_on = @bitCast(enable);
-    ck32k_cfg.int_power_on = @bitCast(!enable);
-    ck32k_cfg.xt_use = @bitCast(enable);
+    ck32k_cfg.xt_power_on = enable;
+    ck32k_cfg.int_power_on = !enable;
+    ck32k_cfg.xt_use = enable;
 
-    reg_analog_ie.setBit(13, enable);
+    analog_ie.setBit(13, enable);
 }
