@@ -27,7 +27,7 @@ const bonding: u8 = c.TRUE;
 const scan_rsp_data = bleDataBytes(.{
     c.GAP_ADTYPE_LOCAL_NAME_COMPLETE,       config.ble.name,
     c.GAP_ADTYPE_SLAVE_CONN_INTERVAL_RANGE, &[2]u16{ config.ble.conn_interval_min, config.ble.conn_interval_max },
-    c.GAP_ADTYPE_POWER_LEVEL,               &@as(u8, 0),
+    c.GAP_ADTYPE_POWER_LEVEL,               &config.ble.tx_power.value(),
 });
 
 const advert_data = bleDataBytes(.{

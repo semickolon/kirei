@@ -13,35 +13,15 @@ const isp = @cImport(@cInclude("ISP583.h"));
 const n = @import("assigned_numbers.zig");
 
 var memBuf: [config.ble.mem_heap_size / 4]u32 align(4) = undefined;
-var cfg = std.mem.zeroes(c.bleConfig_t);
 
-const WAKE_UP_RTC_MAX_TIME = 45; // ~1.4ms in 32KHz RTC cycles
+var ble_config: c.bleConfig_t = blk: {
+    var cfg = std.mem.zeroes(c.bleConfig_t);
 
-// Are these sleep min, max values just by choice or is it the chip's limitations?
-const SLEEP_RTC_MIN_TIME = 33; // ~1ms
-const SLEEP_RTC_MAX_TIME = 2715440914; // RTC max 32K cycle (idk how long this is yet) minus 1hr
-
-pub fn init() !void {
-    try initBleModule();
-    rtc.init();
-    try tmos.init();
-
-    pmu.setWakeUpEvent(.rtc, true);
-    rtc.setTriggerMode(true);
-    interrupts.set(.rtc, true);
-}
-
-pub fn process() void {
-    c.TMOS_SystemProcess();
-}
-
-fn initBleModule() !void {
-    cfg.MEMAddr = @intFromPtr(&memBuf);
     cfg.MEMLen = config.ble.mem_heap_size;
     cfg.BufMaxLen = config.ble.buf_max_len;
     cfg.BufNumber = config.ble.buf_number;
     cfg.TxNumEvent = config.ble.tx_num_event;
-    cfg.TxPower = config.ble.tx_power;
+    cfg.TxPower = @intFromEnum(config.ble.tx_power);
 
     cfg.SNVAddr = 0x77E00 - 0x070000; // TODO: Why?
     cfg.readFlashCB = libReadFlash;
@@ -59,7 +39,67 @@ fn initBleModule() !void {
     cfg.WakeUpTime = WAKE_UP_RTC_MAX_TIME;
     cfg.sleepCB = enterSleep;
 
-    const result = c.BLE_LibInit(&cfg);
+    break :blk cfg;
+};
+
+const WAKE_UP_RTC_MAX_TIME = 45; // ~1.4ms in 32KHz RTC cycles
+
+// Are these sleep min, max values just by choice or is it the chip's limitations?
+const SLEEP_RTC_MIN_TIME = 33; // ~1ms
+const SLEEP_RTC_MAX_TIME = 2715440914; // RTC max 32K cycle (idk how long this is yet) minus 1hr
+
+pub const TxPower = enum(u8) {
+    dbm_n16 = c.LL_TX_POWEER_MINUS_16_DBM, // Negative
+    dbm_n12 = c.LL_TX_POWEER_MINUS_12_DBM,
+    dbm_n8 = c.LL_TX_POWEER_MINUS_8_DBM,
+    dbm_n5 = c.LL_TX_POWEER_MINUS_5_DBM,
+    dbm_n3 = c.LL_TX_POWEER_MINUS_3_DBM,
+    dbm_n1 = c.LL_TX_POWEER_MINUS_1_DBM,
+    dbm_0 = c.LL_TX_POWEER_0_DBM, // Zero
+    dbm_1 = c.LL_TX_POWEER_1_DBM, // Positive
+    dbm_2 = c.LL_TX_POWEER_2_DBM,
+    dbm_3 = c.LL_TX_POWEER_3_DBM,
+    dbm_4 = c.LL_TX_POWEER_4_DBM,
+    dbm_5 = c.LL_TX_POWEER_5_DBM,
+    dbm_6 = c.LL_TX_POWEER_6_DBM,
+
+    pub fn value(comptime self: @This()) i8 {
+        return switch (self) {
+            .dbm_n16 => -16,
+            .dbm_n12 => -12,
+            .dbm_n8 => -8,
+            .dbm_n5 => -5,
+            .dbm_n3 => -3,
+            .dbm_n1 => -1,
+            .dbm_0 => 0,
+            .dbm_1 => 1,
+            .dbm_2 => 2,
+            .dbm_3 => 3,
+            .dbm_4 => 4,
+            .dbm_5 => 5,
+            .dbm_6 => 6,
+        };
+    }
+};
+
+pub fn init() !void {
+    try initBleModule();
+    rtc.init();
+    try tmos.init();
+
+    pmu.setWakeUpEvent(.rtc, true);
+    rtc.setTriggerMode(true);
+    interrupts.set(.rtc, true);
+}
+
+pub fn process() void {
+    c.TMOS_SystemProcess();
+}
+
+fn initBleModule() !void {
+    ble_config.MEMAddr = @intFromPtr(&memBuf);
+
+    const result = c.BLE_LibInit(&ble_config);
 
     return switch (result) {
         c.SUCCESS => {},
