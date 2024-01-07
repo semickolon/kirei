@@ -1,5 +1,7 @@
 const common = @import("common.zig");
 
+const rtc = @import("rtc.zig");
+
 const InterruptNum = enum(u6) {
     reset = 1,
     nmi = 2,
@@ -66,7 +68,6 @@ fn interruptReturn() noreturn {
 }
 
 export fn RTC_IRQHandler() noreturn {
-    // R8_RTC_FLAG_CTRL = (RB_RTC_TMR_CLR | RB_RTC_TRIG_CLR);
-    @as(*volatile u8, @ptrFromInt(0x40001030)).* = 48;
+    rtc.clearFlags();
     interruptReturn();
 }

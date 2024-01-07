@@ -1,6 +1,14 @@
 const common = @import("common.zig");
 
-const RtcModeCtrl = packed struct(u8) {
+const FlagCtrl = packed struct(u8) {
+    __R0: u4,
+    timing_clear: bool,
+    trigger_clear: bool,
+    timer_flag: bool,
+    trigger_flag: bool,
+};
+
+const ModeCtrl = packed struct(u8) {
     timing_cycle_sec: enum(u3) { s0p125, s0p25, s0p5, s1, s2, s4, s8, s16 },
     ignore_lowest_bit: bool,
     timing_mode_enable: bool,
@@ -9,7 +17,8 @@ const RtcModeCtrl = packed struct(u8) {
     load_high_word: bool,
 };
 
-const mode_ctrl: *volatile RtcModeCtrl = @ptrFromInt(0x40001031);
+const flag_ctrl: *volatile FlagCtrl = @ptrFromInt(0x40001030);
+const mode_ctrl: *volatile ModeCtrl = @ptrFromInt(0x40001031);
 const trig_value: *volatile u32 = @ptrFromInt(0x40001034);
 
 pub fn init() void {
@@ -46,4 +55,9 @@ pub fn setTriggerTime(time: u32) void {
     common.safe_access_reg.enable();
     trig_value.* = time;
     common.safe_access_reg.disable();
+}
+
+pub fn clearFlags() void {
+    flag_ctrl.timing_clear = true;
+    flag_ctrl.trigger_clear = true;
 }
