@@ -5,9 +5,10 @@ const TxPower = @import("ble/ble.zig").TxPower;
 pub const engine = .{
     .key_map = [_]u8{
         // Basic HID keycodes
-        0x09, 0x04, 0x0E,
-        0x05, 0x06, 0x07,
-        0x2A, 0x28, 0x2C,
+        0x14, 0x1A, 0x08, 0x15, 0x17, 0x1C, 0x18, 0x0C, 0x12, 0x13,
+        0x04, 0x16, 0x07, 0x09, 0x0A, 0x0B, 0x0D, 0x0E, 0x0F, 0x33,
+        0x1D, 0x1B, 0x06, 0x19, 0x05, 0x11, 0x10, 0x36, 0x37, 0x38,
+        0,    0,    16,   17,   0x2A, 0x2C, 21,   4,    0,    0,
     },
     .callbacks = .{
         .onHidWrite = @import("ble/ble_dev.zig").onHidWrite,
@@ -16,8 +17,8 @@ pub const engine = .{
 
 pub const kscan = .{
     .matrix = .{
-        .cols = .{ P.B15, P.B14, P.B13 },
-        .rows = .{ P.B10, P.B7, P.B4 },
+        .cols = .{ P.B11, P.B10, P.B7, P.B4, P.B22, P.A10, P.A12, P.A13, P.A14, P.A15 },
+        .rows = .{ P.B12, P.B13, P.A5, P.A4 },
     },
 };
 
@@ -28,7 +29,7 @@ const ble_max_connections = .{
 
 pub const ble = .{
     .name = "Codename Kiwi :)",
-    .mac_addr = [6]u8{ 0x69, 0x69, 0x69, 0x04, 0x20, 0x66 },
+    .mac_addr = [6]u8{ 0x69, 0x69, 0x69, 0x04, 0x20, 0x67 },
     .mem_heap_size = 1024 * 6,
     .buf_max_len = 27,
     .buf_number = 5,

@@ -134,6 +134,9 @@ fn getSysTickCount() callconv(.C) u32 {
 }
 
 fn enterSleep(time: u32) callconv(.C) u32 {
+    // TODO: Move somewhere else nicer. GPIO interrupt?
+    @import("../kscan.zig").scan();
+
     {
         interrupts.globalSet(false);
         defer interrupts.globalSet(true);

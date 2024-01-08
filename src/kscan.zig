@@ -47,12 +47,11 @@ pub fn scan() void {
         }
 
         col.write(false);
-        colSwitchDelay();
     }
 }
 
 fn colSwitchDelay() void {
-    inline for (0..8) |_| {
+    for (0..2) |_| {
         asm volatile ("nop");
     }
 }

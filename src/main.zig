@@ -27,7 +27,6 @@ pub fn main() noreturn {
     ble_dev.init();
 
     while (true) {
-        kscan.scan();
         ble.process();
     }
 }
