@@ -6,6 +6,8 @@ const n = @import("assigned_numbers.zig");
 const bleDataBytes = @import("utils.zig").bleDataBytes;
 const tmos = @import("tmos.zig");
 
+const Duration = @import("../duration.zig").Duration;
+
 const DeviceInfoService = @import("dev_info_service.zig");
 const BatteryService = @import("battery_service.zig");
 const HidService = @import("hid_service.zig");
@@ -123,7 +125,7 @@ fn onGapStateChange(new_state: c.gapRole_States_t, event: [*c]c.gapRoleEvent_t) 
 
         setAdvertising(false);
 
-        tmos_task.startEvent(.start_param_update, 2800);
+        tmos_task.startEvent(.start_param_update, Duration.fromSecs(2));
     } else if (gap_state == c.GAPROLE_CONNECTED and new_state != c.GAPROLE_CONNECTED) {
         conn_secure = false;
         gap_conn_handle = c.GAP_CONNHANDLE_INIT;

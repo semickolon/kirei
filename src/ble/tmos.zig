@@ -1,13 +1,17 @@
 const c = @import("../lib/ch583.zig");
 
+const Duration = @import("../duration.zig").Duration;
+
 pub const TaskId = c.tmosTaskID;
+
+pub const SYSTEM_TIME_US: u32 = c.SYSTEM_TIME_MICROSEN;
 
 pub const TaskBlueprint = struct {
     sys_event_callback: ?*const fn (*anyopaque) void = null,
     Event: type,
     events_callback: []const *const fn () void,
 
-    fn validate(comptime self: @This()) void {
+    fn validate(comptime self: TaskBlueprint) void {
         if (self.events_callback.len == 0 or self.events_callback.len > 15) {
             @compileError("Invalid amount of event callbacks.");
         }
@@ -37,8 +41,8 @@ pub fn Task(comptime EventEnum: type) type {
         const Self = @This();
         pub const Event = EventEnum;
 
-        pub fn startEvent(self: Self, comptime event: Event, time: c.tmosTimer) void {
-            _ = c.tmos_start_task(self.id, eventToNative(event), time);
+        pub fn startEvent(self: Self, comptime event: Event, duration: Duration) void {
+            _ = c.tmos_start_task(self.id, eventToNative(event), asTmosTime(duration));
         }
 
         pub fn setEvent(self: Self, comptime event: Event) void {
@@ -94,4 +98,8 @@ pub fn register(comptime blueprint: TaskBlueprint) Task(blueprint.Event) {
     };
 
     return .{ .id = c.TMOS_ProcessEventRegister(handler.process) };
+}
+
+pub fn asTmosTime(duration: Duration) c.tmosTimer {
+    return duration.micros / SYSTEM_TIME_US;
 }

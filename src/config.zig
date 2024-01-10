@@ -44,5 +44,5 @@ pub const ble = .{
 
 pub const sys = .{
     .clock = clocks.SysClock.pll_60_mhz,
-    .led_1 = P.A8, // Flashes on sleep/wake
+    .led_1 = P.A8,
 };
