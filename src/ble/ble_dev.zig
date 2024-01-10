@@ -4,16 +4,24 @@ const config = @import("../config.zig");
 
 const n = @import("assigned_numbers.zig");
 const bleDataBytes = @import("utils.zig").bleDataBytes;
+const tmos = @import("tmos.zig");
 
 const DeviceInfoService = @import("dev_info_service.zig");
 const BatteryService = @import("battery_service.zig");
 const HidService = @import("hid_service.zig");
 
-const START_DEVICE_EVT: u16 = 1;
-const START_REPORT_EVT: u16 = 2;
-const START_PARAM_UPDATE_EVT: u16 = 4;
+const blueprint = tmos.TaskBlueprint{
+    .Event = enum(u4) {
+        start_device,
+        start_param_update,
+    },
+    .events_callback = &.{
+        tmosEvtStartDevice,
+        tmosEvtStartParamUpdate,
+    },
+};
+var tmos_task: tmos.Task(blueprint.Event) = undefined;
 
-var task_id: u8 = c.INVALID_TASK;
 var gap_state: c.gapRole_States_t = c.GAPROLE_INIT;
 var gap_conn_handle: u16 = c.GAP_CONNHANDLE_INIT;
 var conn_secure = false;
@@ -44,7 +52,7 @@ pub fn init() void {
         @compileError("advert_data is longer than max of 31 bytes.");
     }
 
-    task_id = c.TMOS_ProcessEventRegister(onTmosEvent);
+    tmos_task = tmos.register(blueprint);
 
     _ = c.GAPBondMgr_SetParameter(c.GAPBOND_AUTO_SYNC_WL, @sizeOf(u8), @constCast(&c.TRUE));
 
@@ -55,7 +63,7 @@ pub fn init() void {
     BatteryService.register();
     HidService.register();
 
-    _ = c.tmos_set_event(task_id, START_DEVICE_EVT);
+    tmos_task.setEvent(.start_device);
 
     // HidEmu_Init
     _ = c.GAPRole_SetParameter(c.GAPROLE_ADVERT_ENABLED, @sizeOf(u8), @constCast(&c.TRUE));
@@ -72,48 +80,30 @@ pub fn init() void {
     _ = c.GAPBondMgr_SetParameter(c.GAPBOND_PERI_BONDING_ENABLED, @sizeOf(u8), @constCast(&bonding));
 }
 
-fn onTmosEvent(_: u8, events: u16) callconv(.C) u16 {
-    if (events & c.SYS_EVENT_MSG != 0) {
-        const msg = c.tmos_msg_receive(task_id);
+fn tmosEvtStartDevice() void {
+    _ = c.GAPRole_PeripheralStartDevice(
+        tmos_task.id,
+        @constCast(&c.gapBondCBs_t{
+            .passcodeCB = null,
+            .pairStateCB = onGapPairStateChange,
+        }),
+        @constCast(&c.gapRolesCBs_t{
+            .pfnStateChange = onGapStateChange,
+            .pfnRssiRead = null,
+            .pfnParamUpdate = null,
+        }),
+    );
+}
 
-        if (@intFromPtr(msg) != 0) {
-            _ = c.tmos_msg_deallocate(msg);
-        }
-
-        return @intCast(events ^ c.SYS_EVENT_MSG);
-    }
-
-    if (events & START_DEVICE_EVT != 0) {
-        _ = c.GAPRole_PeripheralStartDevice(
-            task_id,
-            @constCast(&c.gapBondCBs_t{
-                .passcodeCB = null,
-                .pairStateCB = onGapPairStateChange,
-            }),
-            @constCast(&c.gapRolesCBs_t{
-                .pfnStateChange = onGapStateChange,
-                .pfnRssiRead = null,
-                .pfnParamUpdate = null,
-            }),
-        );
-
-        return @intCast(events ^ START_DEVICE_EVT);
-    }
-
-    if (events & START_PARAM_UPDATE_EVT != 0) {
-        _ = c.GAPRole_PeripheralConnParamUpdateReq(
-            gap_conn_handle,
-            config.ble.conn_interval_min,
-            config.ble.conn_interval_max,
-            0,
-            500,
-            task_id,
-        );
-
-        return @intCast(events ^ START_PARAM_UPDATE_EVT);
-    }
-
-    return 0;
+fn tmosEvtStartParamUpdate() void {
+    _ = c.GAPRole_PeripheralConnParamUpdateReq(
+        gap_conn_handle,
+        config.ble.conn_interval_min,
+        config.ble.conn_interval_max,
+        0,
+        500,
+        tmos_task.id,
+    );
 }
 
 pub fn onHidWrite(code: u8, down: bool) void {
@@ -133,7 +123,7 @@ fn onGapStateChange(new_state: c.gapRole_States_t, event: [*c]c.gapRoleEvent_t) 
 
         setAdvertising(false);
 
-        _ = c.tmos_start_task(task_id, START_PARAM_UPDATE_EVT, 2800);
+        tmos_task.startEvent(.start_param_update, 2800);
     } else if (gap_state == c.GAPROLE_CONNECTED and new_state != c.GAPROLE_CONNECTED) {
         conn_secure = false;
         gap_conn_handle = c.GAP_CONNHANDLE_INIT;

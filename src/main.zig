@@ -10,7 +10,7 @@ const gpio = @import("hal/gpio.zig");
 
 const led_1 = config.sys.led_1;
 
-pub fn main() noreturn {
+pub inline fn main() noreturn {
     pmu.useDcDc(true);
 
     clocks.use(config.sys.clock);
