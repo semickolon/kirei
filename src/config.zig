@@ -17,8 +17,8 @@ pub const engine = .{
 
 pub const kscan = .{
     .matrix = .{
-        .cols = .{ P.B11, P.B10, P.B7, P.B4, P.B22, P.A10, P.A12, P.A13, P.A14, P.A15 },
-        .rows = .{ P.B12, P.B13, P.A5, P.A4 },
+        .cols = .{ P.B15, P.B14, P.B13 },
+        .rows = .{ P.B10, P.B7, P.B4 },
     },
 };
 
@@ -28,13 +28,13 @@ const ble_max_connections = .{
 };
 
 pub const ble = .{
-    .name = "Codename Kiwi :)",
-    .mac_addr = [6]u8{ 0x69, 0x69, 0x69, 0x04, 0x20, 0x67 },
+    .name = "Kirei",
+    .mac_addr = [6]u8{ 0x68, 0x69, 0xEF, 0xBE, 0xAD, 0xDE },
     .mem_heap_size = 1024 * 6,
     .buf_max_len = 27,
     .buf_number = 5,
     .tx_num_event = 1,
-    .tx_power = TxPower.dbm_0,
+    .tx_power = TxPower.dbm_n3,
     .peripheral_max_connections = ble_max_connections.peripheral,
     .central_max_connections = ble_max_connections.central,
     .total_max_connections = ble_max_connections.peripheral + ble_max_connections.central,

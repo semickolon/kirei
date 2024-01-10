@@ -86,9 +86,11 @@ pub fn sleepIdle() void {
 pub fn sleepDeep(req_power_plan: PowerPlan) void {
     // TODO: Things left from WCH's examples and I don't know why
     // - Save and restore MAC address
-    // - Disable batt. voltage detection (I get this though)
-    // - Set tuning
     // - Set R8_PLL_CONFIG
+    //
+    //  I get the following though:
+    // - Disable batt. voltage detection
+    // - Tune HSE to rated 100% current. We don't need to tune LSE since we use LSI.
 
     pfic_sys_ctrl.deep_sleep = true;
 

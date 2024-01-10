@@ -149,7 +149,7 @@ fn enterSleep(time: u32) callconv(.C) u32 {
             time - time_curr;
 
         if (sleep_dur < SLEEP_RTC_MIN_TIME or sleep_dur > SLEEP_RTC_MAX_TIME) {
-            return 2;
+            return 2; // No documentation on what 2 means.
         }
 
         rtc.setTriggerTime(time);
@@ -157,7 +157,7 @@ fn enterSleep(time: u32) callconv(.C) u32 {
 
     // There's a possibility that, right here, RTC interrupt may have just been triggered.
     // In that case, there's no more need to sleep. We return early to prevent sleeping.
-    if (rtc.isTriggerTimeActivated() and false) {
+    if (rtc.isTriggerTimeActivated()) {
         return 3; // No documentation on what 3 means.
     }
 
@@ -167,10 +167,12 @@ fn enterSleep(time: u32) callconv(.C) u32 {
         .extend = true,
     });
 
-    if (!rtc.isTriggerTimeActivated()) {
-        // We're woken up by something *other than* the RTC interrupt.
-        // In this case, the 32MHz oscillator is not stable right now.
-        // We need to sleep idle (non-deep) for a bit and let it stabilize.
+    if (rtc.isTriggerTimeActivated()) {
+        // We're woken up by the RTC trigger - it's time to prepare for the connection interval.
+        // When coming from deep sleep, HSE has just powered on and needs 1.5ms (typ) to stabilize.
+        // We need HSE to stabilize since BLE transmission is time-critical.
+        // Fortunately, we configured the BLE stack to give us that much time to get ready.
+        // So here, we sleep light (HSE awake) for ~1.5ms, so when we wake up, it's show time!
         rtc.setTriggerTime(time +% WAKE_UP_RTC_MAX_TIME);
         pmu.sleepIdle();
     }
