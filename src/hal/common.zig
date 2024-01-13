@@ -3,10 +3,10 @@ pub fn Reg(comptime T: type) type {
         ptr: *volatile T,
 
         const Self = @This();
-        const Offset = switch (T) {
-            u32 => u5,
-            u16 => u4,
-            u8 => u3,
+        const Offset = switch (@bitSizeOf(T)) {
+            32 => u5,
+            16 => u4,
+            8 => u3,
             else => unreachable,
         };
 
@@ -41,20 +41,12 @@ pub fn Reg(comptime T: type) type {
     };
 }
 
-pub fn Reg32(comptime address: u32) Reg(u32) {
-    return Reg(u32).init(address);
-}
-
-pub fn Reg16(comptime address: u32) Reg(u16) {
-    return Reg(u16).init(address);
-}
-
-pub fn Reg8(comptime address: u32) Reg(u8) {
-    return Reg(u8).init(address);
-}
+pub const Reg32 = Reg(u32);
+pub const Reg16 = Reg(u16);
+pub const Reg8 = Reg(u8);
 
 pub const safe_access = struct {
-    const reg = Reg8(0x40001040);
+    const reg = Reg8.init(0x40001040);
 
     pub fn enable() void {
         reg.set(0x57);

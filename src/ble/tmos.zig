@@ -41,7 +41,7 @@ pub fn Task(comptime EventEnum: type) type {
         const Self = @This();
         pub const Event = EventEnum;
 
-        pub fn startEvent(self: Self, comptime event: Event, duration: Duration) void {
+        pub fn scheduleEvent(self: Self, comptime event: Event, duration: Duration) void {
             _ = c.tmos_start_task(self.id, eventToNative(event), asTmosTime(duration));
         }
 

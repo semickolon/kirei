@@ -4,7 +4,7 @@ const safe_access = common.safe_access;
 const clk_sys_cfg: *volatile Reg16ClkSysCfg = @ptrFromInt(0x40001008);
 const hfck_pwr_ctrl: *volatile Reg8HfckPwrCtrl = @ptrFromInt(0x4000100A);
 const ck32k_cfg: *volatile Reg8Ck32kCfg = @ptrFromInt(0x4000102F);
-const analog_ie = common.Reg16(0x4000101A);
+const analog_ie = common.Reg16.init(0x4000101A);
 
 const Reg16ClkSysCfg = packed struct(u16) {
     freq_div: u5,

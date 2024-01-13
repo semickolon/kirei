@@ -19,8 +19,8 @@ const ModeCtrl = packed struct(u8) {
 
 const flag_ctrl: *volatile FlagCtrl = @ptrFromInt(0x40001030);
 const mode_ctrl: *volatile ModeCtrl = @ptrFromInt(0x40001031);
-const count_32k = common.Reg32(0x40001038);
-const trig_value = common.Reg32(0x40001034);
+const count_32k = common.Reg32.init(0x40001038);
+const trig_value = common.Reg32.init(0x40001034);
 
 pub const MAX_CYCLE_32K: u32 = 0xA8C00000;
 

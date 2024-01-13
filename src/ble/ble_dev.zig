@@ -125,7 +125,7 @@ fn onGapStateChange(new_state: c.gapRole_States_t, event: [*c]c.gapRoleEvent_t) 
 
         setAdvertising(false);
 
-        tmos_task.startEvent(.start_param_update, Duration.fromSecs(2));
+        tmos_task.scheduleEvent(.start_param_update, Duration.fromSecs(2));
     } else if (gap_state == c.GAPROLE_CONNECTED and new_state != c.GAPROLE_CONNECTED) {
         conn_secure = false;
         gap_conn_handle = c.GAP_CONNHANDLE_INIT;

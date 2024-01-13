@@ -1,5 +1,6 @@
 const common = @import("common.zig");
-const Reg = common.Reg;
+const Reg32 = common.Reg32;
+const Reg16 = common.Reg16;
 
 const interrupts = @import("interrupts.zig");
 
@@ -11,14 +12,14 @@ var pb_int_trig = InterruptBitSet.initEmpty();
 
 const port_a = Port{
     .registers = .{
-        .dir = common.Reg32(0x400010A0),
-        .pin = common.Reg32(0x400010A4),
-        .out = common.Reg32(0x400010A8),
-        .pu = common.Reg32(0x400010B0),
-        .pd_drv = common.Reg32(0x400010B4),
-        .interrupt_enable = common.Reg16(0x40001090),
-        .interrupt_mode = common.Reg16(0x40001094),
-        .interrupt_flag = common.Reg16(0x4000109C),
+        .dir = Reg32.init(0x400010A0),
+        .pin = Reg32.init(0x400010A4),
+        .out = Reg32.init(0x400010A8),
+        .pu = Reg32.init(0x400010B0),
+        .pd_drv = Reg32.init(0x400010B4),
+        .interrupt_enable = Reg16.init(0x40001090),
+        .interrupt_mode = Reg16.init(0x40001094),
+        .interrupt_flag = Reg16.init(0x4000109C),
     },
     .interrupt_num = .gpio_a,
     .interrupt_triggered = @ptrCast(&pa_int_trig),
@@ -26,14 +27,14 @@ const port_a = Port{
 
 const port_b = Port{
     .registers = .{
-        .dir = common.Reg32(0x400010C0),
-        .pin = common.Reg32(0x400010C4),
-        .out = common.Reg32(0x400010C8),
-        .pu = common.Reg32(0x400010D0),
-        .pd_drv = common.Reg32(0x400010D4),
-        .interrupt_enable = common.Reg16(0x40001092),
-        .interrupt_mode = common.Reg16(0x40001096),
-        .interrupt_flag = common.Reg16(0x4000109E),
+        .dir = Reg32.init(0x400010C0),
+        .pin = Reg32.init(0x400010C4),
+        .out = Reg32.init(0x400010C8),
+        .pu = Reg32.init(0x400010D0),
+        .pd_drv = Reg32.init(0x400010D4),
+        .interrupt_enable = Reg16.init(0x40001092),
+        .interrupt_mode = Reg16.init(0x40001096),
+        .interrupt_flag = Reg16.init(0x4000109E),
     },
     .interrupt_num = .gpio_b,
     .interrupt_triggered = @ptrCast(&pb_int_trig),
@@ -46,14 +47,14 @@ const Port = struct {
 };
 
 const PortRegisters = struct {
-    dir: Reg(u32),
-    pin: Reg(u32),
-    out: Reg(u32),
-    pu: Reg(u32),
-    pd_drv: Reg(u32),
-    interrupt_enable: Reg(u16),
-    interrupt_mode: Reg(u16),
-    interrupt_flag: Reg(u16),
+    dir: Reg32,
+    pin: Reg32,
+    out: Reg32,
+    pu: Reg32,
+    pd_drv: Reg32,
+    interrupt_enable: Reg16,
+    interrupt_mode: Reg16,
+    interrupt_flag: Reg16,
 };
 
 const Mode = enum {
@@ -113,12 +114,12 @@ pub const Pin = packed struct {
         self.portRegs().out.toggleBit(self.num);
     }
 
-    pub fn setInterrupt(self: Self, trigger: bool) void {
+    pub fn setInterrupt(self: Self, trigger: ?enum { level, edge }) void {
         const port_regs = self.portRegs();
         const int_num = self.port().interrupt_num;
 
-        if (trigger) {
-            port_regs.interrupt_mode.setBit(self.num, true);
+        if (trigger) |trig| {
+            port_regs.interrupt_mode.setBit(self.num, trig == .edge);
             port_regs.out.setBit(self.num, true);
             port_regs.interrupt_enable.setBit(self.num, true);
             interrupts.set(int_num, true);

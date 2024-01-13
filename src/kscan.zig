@@ -42,15 +42,16 @@ pub fn process() void {
     if (scanning)
         return;
 
-    var will_scan = false;
+    var start_scanning = false;
 
     for (matrix.rows) |row| {
-        will_scan = will_scan or row.isInterruptTriggered();
+        start_scanning = start_scanning or row.isInterruptTriggered();
         row.clearInterruptTriggered();
     }
 
-    if (will_scan)
+    if (start_scanning) {
         setScanning(true);
+    }
 }
 
 fn setScanning(value: bool) void {
@@ -62,7 +63,7 @@ fn setScanning(value: bool) void {
     }
 
     for (matrix.rows) |row| {
-        row.setInterrupt(!scanning);
+        row.setInterrupt(if (scanning) null else .edge);
     }
 
     if (scanning) {
@@ -71,7 +72,7 @@ fn setScanning(value: bool) void {
 }
 
 pub fn scheduleNextScan() void {
-    task.startEvent(.scan, scan_interval);
+    task.scheduleEvent(.scan, scan_interval);
 }
 
 pub fn scan() void {
