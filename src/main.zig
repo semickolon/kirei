@@ -19,14 +19,14 @@ pub inline fn main() noreturn {
     led_1.config(.output);
     led_1.write(true);
 
-    kscan.init();
-
     ble.init() catch unreachable;
     ble.initPeripheralRole() catch unreachable;
 
     ble_dev.init();
+    kscan.init();
 
     while (true) {
+        kscan.process();
         ble.process();
     }
 }

@@ -42,10 +42,10 @@ var ble_config: c.bleConfig_t = blk: {
     break :blk cfg;
 };
 
-const WAKE_UP_RTC_MAX_TIME = 45; // ~1.4ms in 32KHz RTC cycles
+const WAKE_UP_RTC_MAX_TIME = 16; // 0.5ms in 32KHz RTC cycles
 
 // Are these sleep min, max values just by choice or is it the chip's limitations?
-const SLEEP_RTC_MIN_TIME = 33; // ~1ms
+const SLEEP_RTC_MIN_TIME = 8; // 0.25ms
 const SLEEP_RTC_MAX_TIME = 2715440914; // RTC max 32K cycle (idk how long this is yet) minus 1hr
 
 pub const TxPower = enum(u8) {
@@ -134,9 +134,6 @@ fn getSysTickCount() callconv(.C) u32 {
 }
 
 fn enterSleep(time: u32) callconv(.C) u32 {
-    // TODO: Move somewhere else nicer. GPIO interrupt?
-    @import("../kscan.zig").scan();
-
     {
         interrupts.globalSet(false);
         defer interrupts.globalSet(true);
@@ -169,10 +166,10 @@ fn enterSleep(time: u32) callconv(.C) u32 {
 
     if (rtc.isTriggerTimeActivated()) {
         // We're woken up by the RTC trigger - it's time to prepare for the connection interval.
-        // When coming from deep sleep, HSE has just powered on and needs 1.5ms (typ) to stabilize.
+        // When coming from deep sleep, HSE has just powered on and needs 0.5ms (typ) to stabilize.
         // We need HSE to stabilize since BLE transmission is time-critical.
         // Fortunately, we configured the BLE stack to give us that much time to get ready.
-        // So here, we sleep light (HSE awake) for ~1.5ms, so when we wake up, it's show time!
+        // So here, we sleep light (HSE awake) for 0.5ms, so when we wake up, it's show time!
         rtc.setTriggerTime(time +% WAKE_UP_RTC_MAX_TIME);
         pmu.sleepIdle();
     }
@@ -329,8 +326,7 @@ pub const ClientCharCfg = struct {
 
         if (c.GATT_Notification(conn_handle, &noti, 0) != c.SUCCESS) {
             c.GATT_bm_free(@ptrCast(&noti), c.ATT_HANDLE_VALUE_NOTI);
-        } else {
-            config.sys.led_1.toggle();
+            // TODO: Handle errors here. It can result to a key release not being delivered otherwise.
         }
     }
 };

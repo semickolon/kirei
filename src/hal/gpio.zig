@@ -1,21 +1,44 @@
 const common = @import("common.zig");
 const Reg32 = common.Reg32;
+const Reg16 = common.Reg16;
+
+const interrupts = @import("interrupts.zig");
+
+const std = @import("std");
+const InterruptBitSet = std.bit_set.IntegerBitSet(16);
+
+var pa_int_trig = InterruptBitSet.initEmpty();
+var pb_int_trig = InterruptBitSet.initEmpty();
 
 const ports = .{
-    .a = Port{ .registers = .{
-        .dir = Reg32(0x400010A0),
-        .pin = Reg32(0x400010A4),
-        .out = Reg32(0x400010A8),
-        .pu = Reg32(0x400010B0),
-        .pd_drv = Reg32(0x400010B4),
-    } },
-    .b = Port{ .registers = .{
-        .dir = Reg32(0x400010C0),
-        .pin = Reg32(0x400010C4),
-        .out = Reg32(0x400010C8),
-        .pu = Reg32(0x400010D0),
-        .pd_drv = Reg32(0x400010D4),
-    } },
+    .a = Port{
+        .registers = .{
+            .dir = Reg32(0x400010A0),
+            .pin = Reg32(0x400010A4),
+            .out = Reg32(0x400010A8),
+            .pu = Reg32(0x400010B0),
+            .pd_drv = Reg32(0x400010B4),
+            .interrupt_enable = Reg16(0x40001090),
+            .interrupt_mode = Reg16(0x40001094),
+            .interrupt_flag = Reg16(0x4000109C),
+        },
+        .interrupt_num = .gpio_a,
+        .interrupt_triggered = @ptrCast(&pa_int_trig),
+    },
+    .b = Port{
+        .registers = .{
+            .dir = Reg32(0x400010C0),
+            .pin = Reg32(0x400010C4),
+            .out = Reg32(0x400010C8),
+            .pu = Reg32(0x400010D0),
+            .pd_drv = Reg32(0x400010D4),
+            .interrupt_enable = Reg16(0x40001092),
+            .interrupt_mode = Reg16(0x40001096),
+            .interrupt_flag = Reg16(0x4000109E),
+        },
+        .interrupt_num = .gpio_b,
+        .interrupt_triggered = @ptrCast(&pb_int_trig),
+    },
 };
 
 const Port = struct {
@@ -25,7 +48,12 @@ const Port = struct {
         out: type,
         pu: type,
         pd_drv: type,
+        interrupt_enable: type,
+        interrupt_mode: type,
+        interrupt_flag: type,
     },
+    interrupt_num: interrupts.InterruptNum,
+    interrupt_triggered: *InterruptBitSet,
 };
 
 const Mode = enum {
@@ -39,10 +67,7 @@ const Mode = enum {
 fn Pin(comptime port: Port, comptime num: u5) type {
     const port_regs = port.registers;
 
-    return packed struct {
-        pub const my_port = port;
-        pub const my_num = num;
-
+    return struct {
         pub fn config(comptime mode: Mode) void {
             const is_output = switch (mode) {
                 .output, .output_drv => true,
@@ -70,10 +95,31 @@ fn Pin(comptime port: Port, comptime num: u5) type {
             port_regs.out.setBit(num, high);
         }
 
-        pub fn toggle() void {
+        pub inline fn toggle() void {
             port_regs.out.toggleBit(num);
         }
+
+        pub fn setInterrupt(trigger: ?enum(u1) { level, edge }) void {
+            if (trigger) |trig| {
+                port_regs.interrupt_mode.setBit(num, trig == .edge);
+                port_regs.out.setBit(num, true);
+                port_regs.interrupt_enable.setBit(num, true);
+                interrupts.set(port.interrupt_num, true);
+            } else {
+                port_regs.interrupt_enable.setBit(num, false);
+                interrupts.set(port.interrupt_num, port_regs.interrupt_enable.get() != 0);
+            }
+        }
+
+        pub fn isInterruptTriggered() bool {
+            defer port.interrupt_triggered.unset(num);
+            return port.interrupt_triggered.isSet(num);
+        }
     };
+}
+
+pub fn isInterruptTriggered() bool {
+    return pa_int_trig.mask != 0 or pb_int_trig.mask != 0;
 }
 
 pub const pins = struct {
@@ -119,3 +165,21 @@ pub const pins = struct {
     pub const B22 = Pin(ports.b, 22);
     pub const B23 = Pin(ports.b, 23);
 };
+
+inline fn irq_handler(comptime port: Port) void {
+    const int_flag = port.registers.interrupt_flag;
+    const flags = int_flag.get();
+
+    port.interrupt_triggered.mask |= flags;
+    int_flag.set(flags);
+}
+
+export fn GPIOA_IRQHandler() callconv(.Naked) noreturn {
+    defer common.mret();
+    irq_handler(ports.a);
+}
+
+export fn GPIOB_IRQHandler() callconv(.Naked) noreturn {
+    defer common.mret();
+    irq_handler(ports.b);
+}

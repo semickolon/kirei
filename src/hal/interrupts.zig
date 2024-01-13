@@ -2,7 +2,7 @@ const common = @import("common.zig");
 
 const rtc = @import("rtc.zig");
 
-const InterruptNum = enum(u6) {
+pub const InterruptNum = enum(u6) {
     reset = 1,
     nmi = 2,
     exc = 3,
@@ -39,7 +39,7 @@ const IRER: *volatile [2]u32 = @ptrFromInt(0xE000E180);
 
 var isr_backup: [2]u32 = undefined;
 
-pub fn set(comptime num: InterruptNum, comptime enable: bool) void {
+pub fn set(comptime num: InterruptNum, enable: bool) void {
     const irqn = @intFromEnum(num);
     const reg = if (enable) IENR else IRER;
 
