@@ -307,7 +307,7 @@ pub const ClientCharCfg = struct {
         _ = c.GATTServApp_ProcessCCCWriteReq(conn_handle, p_attr, p_value, len, offset, c.GATT_CLIENT_CFG_NOTIFY);
     }
 
-    pub fn notify(self: *Self, comptime T: type, conn_handle: u16, handle: u16, value: *T) void {
+    pub fn notify(self: *Self, comptime T: type, conn_handle: u16, handle: u16, value: *T) !void {
         const char_cfg = c.GATTServApp_ReadCharCfg(conn_handle, @ptrCast(&self.ccc));
         const null_ptr = @as(*allowzero u16, @ptrFromInt(0));
 
@@ -324,9 +324,20 @@ pub const ClientCharCfg = struct {
         noti.len = @sizeOf(T);
         c.tmos_memcpy(noti.pValue, value, noti.len);
 
-        if (c.GATT_Notification(conn_handle, &noti, 0) != c.SUCCESS) {
+        const result = c.GATT_Notification(conn_handle, &noti, 0);
+
+        if (result != c.SUCCESS) {
             c.GATT_bm_free(@ptrCast(&noti), c.ATT_HANDLE_VALUE_NOTI);
-            // TODO: Handle errors here. It can result to a key release not being delivered otherwise.
         }
+
+        return switch (result) {
+            c.SUCCESS => {},
+            c.INVALIDPARAMETER => error.InvalidParameter,
+            c.MSG_BUFFER_NOT_AVAIL => error.MsgBufferNotAvail,
+            c.bleNotConnected => error.BleNotConnected,
+            c.bleMemAllocError => error.BleMemAllocError,
+            c.bleTimeout => error.BleTimeout,
+            else => unreachable,
+        };
     }
 };

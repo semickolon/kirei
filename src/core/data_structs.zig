@@ -39,6 +39,13 @@ pub fn Queue(comptime T: type, comptime capacity: comptime_int) type {
             return elem;
         }
 
+        pub fn peek(self: *Self) ?*T {
+            return if (self.size == 0)
+                null
+            else
+                &self.array[0];
+        }
+
         pub fn isEmpty(self: Self) bool {
             return self.size == 0;
         }

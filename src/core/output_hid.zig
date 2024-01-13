@@ -1,4 +1,7 @@
 const std = @import("std");
+const config = @import("../config.zig");
+
+const REPORT_QUEUE_SIZE = 64;
 
 const Queue = @import("data_structs.zig").Queue;
 
@@ -10,11 +13,14 @@ var report = std.mem.zeroes(HidReport);
 const report_mods: *HidReportMods = @ptrCast(&report[0]);
 const report_codes: *HidReportCodes = report[2..];
 
-var report_queue = Queue(HidReport, 64).init();
+var report_queue = Queue(HidReport, REPORT_QUEUE_SIZE).init();
 
 pub fn pushHidEvent(code: u8, down: bool) !void {
+    var dirty = false;
+
     if (code >= 0xE0 and code <= 0xE7) {
         report_mods.setValue(code - 0xE0, down);
+        dirty = true;
     } else {
         var idx: ?usize = null;
 
@@ -27,12 +33,26 @@ pub fn pushHidEvent(code: u8, down: bool) !void {
 
         if (idx) |i| {
             report_codes[i] = if (down) code else 0;
+            dirty = true;
         } else if (down) {
             // TODO: Handle case if there's no free space
         }
     }
 
-    report_queue.push(report) catch unreachable;
+    if (dirty) {
+        try report_queue.push(report);
+    }
+}
+
+pub fn sendReports() void {
+    while (report_queue.peek()) |head| {
+        config.engine.callbacks.onReportPush(head) catch break;
+        _ = report_queue.pop();
+    }
+}
+
+pub fn peekReport() ?*HidReport {
+    return report_queue.peek();
 }
 
 pub fn popReport() ?HidReport {

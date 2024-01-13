@@ -12,7 +12,7 @@ pub const engine = .{
         0,    0,    16,   17,   0x2A, 0x2C, 21,   4,    0,    0,
     },
     .callbacks = .{
-        .onHidWrite = @import("ble/ble_dev.zig").notifyHidReport,
+        .onReportPush = @import("ble/ble_dev.zig").onReportPush,
     },
 };
 

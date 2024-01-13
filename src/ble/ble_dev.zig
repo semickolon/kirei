@@ -108,9 +108,9 @@ fn tmosEvtStartParamUpdate() void {
     );
 }
 
-pub fn notifyHidReport(report: *[8]u8) void {
+pub fn onReportPush(report: *[8]u8) !void {
     if (conn_secure) {
-        HidService.notify(gap_conn_handle, report);
+        try HidService.notify(gap_conn_handle, report);
     }
 }
 

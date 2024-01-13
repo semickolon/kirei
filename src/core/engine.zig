@@ -33,6 +33,8 @@ pub fn process() void {
             ev.down,
         ) catch unreachable;
     }
+
+    output.sendReports();
 }
 
 pub fn pushKeyEvent(key_idx: KeyIndex, down: bool) void {

@@ -109,8 +109,8 @@ pub fn register() void {
     );
 }
 
-pub fn notify(conn_handle: u16, report: *[8]u8) void {
-    hid_report_ccc.notify(
+pub fn notify(conn_handle: u16, report: *[8]u8) !void {
+    try hid_report_ccc.notify(
         @TypeOf(report.*),
         conn_handle,
         attributes[10].handle,
