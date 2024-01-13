@@ -1,45 +1,56 @@
-pub fn Reg(comptime T: type, comptime address: u32) type {
+pub fn Reg(comptime T: type) type {
     return struct {
-        const ptr: *volatile T = @ptrFromInt(address);
+        ptr: *volatile T,
 
         const Self = @This();
+        const Offset = switch (T) {
+            u32 => u5,
+            u16 => u4,
+            u8 => u3,
+            else => unreachable,
+        };
 
-        pub inline fn get() T {
-            return ptr.*;
+        pub fn init(comptime address: u32) Self {
+            return .{ .ptr = @ptrFromInt(address) };
         }
 
-        pub inline fn set(value: T) void {
-            ptr.* = value;
+        pub inline fn get(self: Self) T {
+            return self.ptr.*;
         }
 
-        pub inline fn getBit(comptime offset: comptime_int) bool {
-            return (ptr.* & (1 << offset)) != 0;
+        pub inline fn set(self: Self, value: T) void {
+            self.ptr.* = value;
         }
 
-        pub inline fn setBit(comptime offset: comptime_int, high: bool) void {
+        pub inline fn getBit(self: Self, offset: anytype) bool {
+            return (self.ptr.* & (@as(T, 1) << offset)) != 0;
+        }
+
+        pub inline fn setBit(self: Self, offset: anytype, high: bool) void {
+            const mask_bit = @as(T, 1) << @truncate(offset);
             if (high) {
-                ptr.* |= (1 << offset);
+                self.ptr.* |= mask_bit;
             } else {
-                ptr.* &= ~@as(T, 1 << offset);
+                self.ptr.* &= ~mask_bit;
             }
         }
 
-        pub inline fn toggleBit(comptime offset: comptime_int) void {
-            ptr.* ^= (1 << offset);
+        pub inline fn toggleBit(self: Self, offset: anytype) void {
+            self.ptr.* ^= @as(T, 1) << offset;
         }
     };
 }
 
-pub fn Reg32(comptime address: u32) type {
-    return Reg(u32, address);
+pub fn Reg32(comptime address: u32) Reg(u32) {
+    return Reg(u32).init(address);
 }
 
-pub fn Reg16(comptime address: u32) type {
-    return Reg(u16, address);
+pub fn Reg16(comptime address: u32) Reg(u16) {
+    return Reg(u16).init(address);
 }
 
-pub fn Reg8(comptime address: u32) type {
-    return Reg(u8, address);
+pub fn Reg8(comptime address: u32) Reg(u8) {
+    return Reg(u8).init(address);
 }
 
 pub const safe_access = struct {

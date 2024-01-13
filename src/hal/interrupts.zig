@@ -39,11 +39,11 @@ const IRER: *volatile [2]u32 = @ptrFromInt(0xE000E180);
 
 var isr_backup: [2]u32 = undefined;
 
-pub fn set(comptime num: InterruptNum, enable: bool) void {
+pub fn set(num: InterruptNum, enable: bool) void {
     const irqn = @intFromEnum(num);
     const reg = if (enable) IENR else IRER;
 
-    reg[(irqn >> 5) & 1] = 1 << (irqn & 0x1F);
+    reg[(irqn >> 5) & 1] = @as(u32, 1) << @truncate(irqn & 0x1F);
 
     if (!enable) {
         common.safeOperate();

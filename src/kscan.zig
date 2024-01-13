@@ -27,11 +27,11 @@ var key_states: [key_count]PhysicalKeyState = .{.{}} ** key_count;
 pub fn init() void {
     task = tmos.register(blueprint);
 
-    inline for (matrix.cols) |col| {
+    for (matrix.cols) |col| {
         col.config(.output);
     }
 
-    inline for (matrix.rows) |row| {
+    for (matrix.rows) |row| {
         row.config(.input_pull_down);
     }
 
@@ -39,14 +39,14 @@ pub fn init() void {
 }
 
 pub fn process() void {
-    if (scanning) return;
+    if (scanning)
+        return;
 
     var will_scan = false;
 
-    inline for (matrix.rows) |row| {
-        if (row.isInterruptTriggered()) {
-            will_scan = true;
-        }
+    for (matrix.rows) |row| {
+        will_scan = will_scan or row.isInterruptTriggered();
+        row.clearInterruptTriggered();
     }
 
     if (will_scan)
@@ -57,12 +57,12 @@ fn setScanning(value: bool) void {
     scanning = value;
     // config.sys.led_1.write(!scanning);
 
-    inline for (matrix.cols) |col| {
+    for (matrix.cols) |col| {
         col.write(!scanning);
     }
 
-    inline for (matrix.rows) |row| {
-        row.setInterrupt(if (scanning) null else .edge);
+    for (matrix.rows) |row| {
+        row.setInterrupt(!scanning);
     }
 
     if (scanning) {
@@ -75,20 +75,28 @@ pub fn scheduleNextScan() void {
 }
 
 pub fn scan() void {
-    var will_scan_again = false;
+    var all_keys_released = true;
 
-    inline for (matrix.cols, 0..) |col, i| {
+    for (matrix.cols, 0..) |col, i| {
         col.write(true);
         colSwitchDelay();
 
-        inline for (matrix.rows, 0..) |row, j| {
+        for (matrix.rows, 0..) |row, j| {
             const key_idx = (j * matrix.cols.len) + i;
             const ks = &key_states[key_idx];
 
-            if (row.read()) {
-                ks.debounce_counter +|= 1;
-            } else {
-                ks.debounce_counter -|= 1;
+            const new_counter = if (row.read())
+                ks.debounce_counter +| 1
+            else
+                ks.debounce_counter -| 1;
+
+            if (new_counter == ks.debounce_counter)
+                continue;
+
+            ks.debounce_counter = new_counter;
+
+            if (ks.debounce_counter != 0) {
+                all_keys_released = false;
             }
 
             if (switch (ks.debounce_counter) {
@@ -98,19 +106,15 @@ pub fn scan() void {
             }) |is_down| {
                 engine.reportKeyDown(key_idx, is_down);
             }
-
-            if (ks.debounce_counter != 0) {
-                will_scan_again = true;
-            }
         }
 
         col.write(false);
     }
 
-    if (will_scan_again) {
-        scheduleNextScan();
-    } else {
+    if (all_keys_released) {
         setScanning(false);
+    } else {
+        scheduleNextScan();
     }
 }
 

@@ -1,5 +1,6 @@
 const clocks = @import("hal/clocks.zig");
-const P = @import("hal/gpio.zig").pins;
+const gpio = @import("hal/gpio.zig");
+const P = gpio.pins;
 const TxPower = @import("ble/ble.zig").TxPower;
 
 pub const engine = .{
@@ -17,8 +18,8 @@ pub const engine = .{
 
 pub const kscan = .{
     .matrix = .{
-        .cols = .{ P.B15, P.B14, P.B13 },
-        .rows = .{ P.B10, P.B7, P.B4 },
+        .cols = [_]gpio.Pin{ P.B15, P.B14, P.B13 },
+        .rows = [_]gpio.Pin{ P.B10, P.B7, P.B4 },
     },
 };
 
