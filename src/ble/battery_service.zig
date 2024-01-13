@@ -2,7 +2,7 @@ const ble = @import("ble.zig");
 const c = @import("../lib/ch583.zig");
 const n = @import("assigned_numbers.zig");
 
-var batt_level: u8 = 69;
+var batt_level: u8 = 100;
 var batt_level_ccc = ble.ClientCharCfg{};
 
 var attributes = [_]ble.GattAttribute{
@@ -11,7 +11,7 @@ var attributes = [_]ble.GattAttribute{
     .{
         .type = ble.GattUuid.init(n.CHAR_BATTERY_LEVEL),
         .permissions = .{ .read = true },
-        .value = &batt_level,
+        .value = @constCast(&0),
     },
     ble.gattAttrClientCharCfg(
         &batt_level_ccc,
@@ -37,6 +37,17 @@ pub fn register() void {
                 .pfnAuthorizeAttrCB = null,
             },
         }),
+    );
+}
+
+pub fn setBattLevel(conn_handle: u16, level: u8) !void {
+    batt_level = level;
+
+    try batt_level_ccc.notify(
+        @TypeOf(batt_level),
+        conn_handle,
+        attributes[3].handle,
+        batt_level,
     );
 }
 

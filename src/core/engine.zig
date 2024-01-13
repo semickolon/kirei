@@ -9,6 +9,7 @@ const KeyState = packed struct {
 };
 
 const KEY_EVENT_QUEUE_CAPACITY = config.engine.key_event_queue_size;
+const KEY_COUNT = config.engine.key_map.len;
 
 pub const KeyIndex = u15;
 pub const TimeMillis = u16;
@@ -20,8 +21,6 @@ pub const KeyEvent = packed struct(u32) {
 };
 
 var key_event_queue: Queue(KeyEvent, KEY_EVENT_QUEUE_CAPACITY) = undefined;
-
-const KEY_COUNT = config.engine.key_map.len;
 
 const key_map = config.engine.key_map;
 const callbacks = config.engine.callbacks;
