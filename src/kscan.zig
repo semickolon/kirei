@@ -105,7 +105,7 @@ pub fn scan() void {
                 std.math.maxInt(@TypeOf(ks.debounce_counter)) => true,
                 else => null,
             }) |is_down| {
-                engine.reportKeyDown(key_idx, is_down);
+                engine.pushKeyEvent(@truncate(key_idx), is_down);
             }
         }
 
