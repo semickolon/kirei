@@ -4,6 +4,7 @@ const ble_dev = @import("ble/ble_dev.zig");
 const config = @import("config.zig");
 const kscan = @import("kscan.zig");
 const engine = @import("core/engine.zig");
+const output_hid = @import("core/output_hid.zig");
 
 const pmu = @import("hal/pmu.zig");
 const clocks = @import("hal/clocks.zig");
@@ -27,6 +28,10 @@ pub inline fn main() noreturn {
     kscan.init();
 
     while (true) {
+        while (output_hid.popReport()) |*report| {
+            ble_dev.notifyHidReport(@constCast(report));
+        }
+
         kscan.process();
         engine.process();
         ble.process();

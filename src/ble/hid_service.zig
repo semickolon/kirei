@@ -9,8 +9,6 @@ const REPORT_ID_MAIN = 1;
 var hid_protocol_mode: HidProtocolMode = .report;
 var hid_report_ccc = ble.ClientCharCfg{};
 
-var report = [_]u8{0} ** 8;
-
 const HidInfo = packed struct {
     bcd_hid: u16 = 0x0111, // 1.11
     country_code: u8 = 0,
@@ -111,14 +109,12 @@ pub fn register() void {
     );
 }
 
-pub fn notify(conn_handle: u16, code: u8) void {
-    report[2] = code;
-
+pub fn notify(conn_handle: u16, report: *[8]u8) void {
     hid_report_ccc.notify(
-        @TypeOf(report),
+        @TypeOf(report.*),
         conn_handle,
         attributes[10].handle,
-        &report,
+        report,
     );
 }
 
