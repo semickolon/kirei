@@ -11,6 +11,8 @@ pub const engine = .{
         0x1D, 0x1B, 0x06, 0x19, 0x05, 0x11, 0x10, 0x36, 0x37, 0x38,
         0,    0,    16,   17,   0x2A, 0x2C, 21,   4,    0,    0,
     },
+    .key_event_queue_size = 32,
+    .report_queue_size = 16,
     .callbacks = .{
         .onReportPush = @import("ble/ble_dev.zig").onReportPush,
     },
@@ -21,6 +23,7 @@ pub const kscan = .{
         .cols = [_]gpio.Pin{ P.B15, P.B14, P.B13 },
         .rows = [_]gpio.Pin{ P.B10, P.B7, P.B4 },
     },
+    .scan_interval = 2, // in 625us units
 };
 
 const ble_max_connections = .{

@@ -8,16 +8,18 @@ const KeyState = packed struct {
     down: bool = false,
 };
 
+const KEY_EVENT_QUEUE_CAPACITY = config.engine.key_event_queue_size;
+
 pub const KeyIndex = u15;
 pub const TimeMillis = u16;
 
 pub const KeyEvent = packed struct(u32) {
     key_idx: KeyIndex,
     down: bool,
-    time: u16,
+    time: TimeMillis,
 };
 
-var key_event_queue: Queue(KeyEvent, 64) = undefined;
+var key_event_queue: Queue(KeyEvent, KEY_EVENT_QUEUE_CAPACITY) = undefined;
 
 const KEY_COUNT = config.engine.key_map.len;
 

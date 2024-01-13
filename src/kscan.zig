@@ -19,7 +19,7 @@ const blueprint = tmos.TaskBlueprint{
 };
 var task: tmos.Task(blueprint.Event) = undefined;
 
-const scan_interval = Duration.fromMicros(625 * 2);
+const scan_interval = Duration.fromMicros(tmos.SYSTEM_TIME_US * config.kscan.scan_interval);
 
 var scanning = false;
 var key_states: [key_count]PhysicalKeyState = .{.{}} ** key_count;
@@ -56,7 +56,6 @@ pub fn process() void {
 
 fn setScanning(value: bool) void {
     scanning = value;
-    // config.sys.led_1.write(!scanning);
 
     for (matrix.cols) |col| {
         col.write(!scanning);
