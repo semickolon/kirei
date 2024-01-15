@@ -4,16 +4,13 @@ const expectEqual = std.testing.expectEqual;
 
 pub fn Queue(comptime T: type, comptime capacity: comptime_int) type {
     return struct {
-        size: usize,
-        array: [capacity]T,
+        size: usize = 0,
+        array: [capacity]T = undefined,
 
         const Self = @This();
 
         pub fn init() Self {
-            return .{
-                .size = 0,
-                .array = undefined,
-            };
+            return .{};
         }
 
         pub fn push(self: *Self, elem: T) !void {
@@ -52,6 +49,67 @@ pub fn Queue(comptime T: type, comptime capacity: comptime_int) type {
     };
 }
 
+pub fn List(comptime T: type, comptime capacity: comptime_int) type {
+    return struct {
+        size: usize = 0,
+        array: [capacity]T = undefined,
+
+        const Self = @This();
+
+        pub fn init() Self {
+            return .{};
+        }
+
+        pub fn pushFront(self: *Self, elem: T) !void {
+            if (self.size == capacity)
+                return error.Overflow;
+
+            std.mem.copyBackwards(T, self.array[1 .. self.size + 1], self.array[0..self.size]);
+            self.array[0] = elem;
+            self.size += 1;
+        }
+
+        pub fn pushBack(self: *Self, elem: T) !void {
+            if (self.size == capacity)
+                return error.Overflow;
+
+            self.array[self.size] = elem;
+            self.size += 1;
+        }
+
+        pub fn remove(self: *Self, idx: usize) T {
+            const elem = self.array[idx];
+
+            if (idx < self.size - 1) { // Not the last element
+                std.mem.copyForwards(T, self.array[idx..self.size], self.array[idx + 1 .. self.size + 1]);
+            }
+
+            self.size -= 1;
+            return elem;
+        }
+
+        pub fn at(self: *Self, idx: usize) *T {
+            return &self.array[idx];
+        }
+
+        pub fn atOrNull(self: *Self, idx: usize) ?*T {
+            return if (idx < self.size) &self.array[idx] else null;
+        }
+
+        pub fn first(self: *Self) ?*T {
+            return self.atOrNull(0);
+        }
+
+        pub fn last(self: *Self) ?*T {
+            return if (self.size > 0) self.array[self.size - 1] else null;
+        }
+
+        pub fn isEmpty(self: Self) bool {
+            return self.size == 0;
+        }
+    };
+}
+
 test {
     var q = Queue(u8, 4).init();
     try expect(q.isEmpty());
@@ -70,4 +128,42 @@ test {
     try expect(q.pop() == 4);
     try expect(q.pop() == 5);
     try expect(q.pop() == null);
+}
+
+test {
+    var q = List(u8, 16).init();
+    try expect(q.isEmpty());
+    try q.pushFront(100);
+    try q.pushBack(70);
+    try q.pushFront(32);
+    try q.pushBack(11);
+    try q.pushBack(69);
+
+    try expectEqual(q.size, 5);
+    try expectEqual(q.at(0).*, 32);
+    try expectEqual(q.at(1).*, 100);
+    try expectEqual(q.at(2).*, 70);
+    try expectEqual(q.at(3).*, 11);
+    try expectEqual(q.at(4).*, 69);
+
+    _ = q.remove(1);
+    try expectEqual(q.size, 4);
+    try expectEqual(q.at(0).*, 32);
+    try expectEqual(q.at(1).*, 70);
+    try expectEqual(q.at(2).*, 11);
+    try expectEqual(q.at(3).*, 69);
+
+    _ = q.remove(3);
+    try expectEqual(q.size, 3);
+    try expectEqual(q.at(0).*, 32);
+    try expectEqual(q.at(1).*, 70);
+    try expectEqual(q.at(2).*, 11);
+
+    _ = q.remove(0);
+    _ = q.remove(1);
+    try expectEqual(q.size, 1);
+    try expectEqual(q.at(0).*, 70);
+
+    _ = q.remove(0);
+    try expect(q.isEmpty());
 }
