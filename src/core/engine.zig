@@ -14,14 +14,20 @@ const KEY_COUNT = config.engine.key_map.len;
 
 pub const KeyIndex = u15;
 pub const TimeMillis = u16;
+pub const ScheduleToken = u8;
 
 pub const KeyEvent = packed struct(u16) {
     key_idx: KeyIndex,
     down: bool,
 };
 
+pub const TimeEvent = packed struct {
+    token: ScheduleToken,
+};
+
 pub const Interface = struct {
     handleKeycode: *const fn (keycode: u16, down: bool) void,
+    scheduleTimeEvent: *const fn (duration: TimeMillis) ScheduleToken,
 };
 
 pub const Event = struct {
@@ -31,10 +37,14 @@ pub const Event = struct {
 
     pub const Data = union(enum) {
         key: KeyEvent,
+        time: TimeEvent,
     };
 
     fn init(data: Data) Event {
-        return Event{ .data = data };
+        return Event{
+            .data = data,
+            .time = getTimeMillis(),
+        };
     }
 
     pub fn markHandled(self: *Event) void {
@@ -55,6 +65,7 @@ pub const ProcessResult = union(enum) {
 
 const interface = Interface{
     .handleKeycode = handleKeycode,
+    .scheduleTimeEvent = scheduleTimeEvent,
 };
 
 var key_event_queue = Queue(KeyEvent, KEY_EVENT_QUEUE_CAPACITY).init();
@@ -69,9 +80,9 @@ pub fn process() void {
     output.sendReports();
 }
 
-fn processEvents() !void {
-    var ev_idx: usize = 0;
+var ev_idx: usize = 0;
 
+fn processEvents() !void {
     blk_ev: while (ev_idx < events.size) {
         const ev = events.at(ev_idx);
         var kd_idx: usize = 0;
@@ -79,23 +90,36 @@ fn processEvents() !void {
         while (kd_idx < key_defs.size) {
             const key_def = key_defs.at(kd_idx);
             const result = key_def.process(&interface, ev);
+            const is_ev_handled = ev.isHandled();
+
+            if (is_ev_handled) {
+                _ = events.remove(ev_idx);
+            }
 
             switch (result) {
                 .pass => {},
                 .block => {},
-                .transform => |next| key_def.* = next,
-                .complete => _ = key_defs.remove(kd_idx),
+                .transform => |next| {
+                    key_def.* = next;
+                    ev_idx = 0;
+                },
+                .complete => {
+                    _ = key_defs.remove(kd_idx);
+                    ev_idx = 0;
+                },
             }
 
-            if (ev.isHandled()) {
-                _ = events.remove(ev_idx);
+            if (is_ev_handled) {
                 continue :blk_ev;
             }
 
             switch (result) {
                 .pass => kd_idx += 1,
-                .block => continue :blk_ev,
-                .transform => {},
+                .block => {
+                    ev_idx += 1;
+                    continue :blk_ev;
+                },
+                .transform => continue :blk_ev,
                 .complete => {},
             }
         }
@@ -107,6 +131,7 @@ fn processEvents() !void {
                 try key_defs.pushBack(key_def);
                 continue :blk_ev;
             },
+            else => {},
         }
 
         _ = events.remove(ev_idx);
@@ -115,6 +140,19 @@ fn processEvents() !void {
 
 fn handleKeycode(keycode: u16, down: bool) void {
     output.pushHidEvent(@truncate(keycode), down) catch unreachable;
+}
+
+fn scheduleTimeEvent(duration: TimeMillis) ScheduleToken {
+    return config.engine.functions.scheduleCall(duration);
+}
+
+fn getTimeMillis() TimeMillis {
+    return config.engine.functions.getTimeMillis();
+}
+
+pub fn callScheduled(token: u8) void {
+    const time_ev = Event.init(.{ .time = .{ .token = token } });
+    events.pushBack(time_ev) catch unreachable;
 }
 
 // Caller must guarantee that all key events are "toggles"

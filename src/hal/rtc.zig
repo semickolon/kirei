@@ -1,3 +1,5 @@
+const std = @import("std");
+
 const common = @import("common.zig");
 
 const FlagCtrl = packed struct(u8) {
@@ -57,6 +59,11 @@ pub fn getTime() u32 {
     }
 
     return time.*;
+}
+
+// TODO: Relocate
+pub fn getTimeMillisForEngine() u16 {
+    return @intCast((getTime() / 32000) % std.math.maxInt(u16));
 }
 
 pub fn setTimingMode(enabled: bool) void {

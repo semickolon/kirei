@@ -26,6 +26,7 @@ pub const KeyDef = struct {
 
     pub const Behavior = union(enum) {
         key_press: KeyPressBehavior,
+        hold_tap: HoldTapBehavior,
     };
 
     const Self = @This();
@@ -35,6 +36,7 @@ pub const KeyDef = struct {
             .key_idx = key_idx,
             .behavior = switch (bytes[0]) {
                 0 => .{ .key_press = KeyPressBehavior.parse(bytes[1..]) },
+                1 => .{ .hold_tap = HoldTapBehavior.parse() },
                 else => unreachable,
             },
         };
@@ -59,17 +61,61 @@ const KeyPressBehavior = struct {
     fn process(self: *Self, key_idx: KeyIndex, eif: *const engine.Interface, ev: *engine.Event) engine.ProcessResult {
         switch (ev.data) {
             .key => |key_ev| {
-                // E is remapped to BKSP
-                if (self.key_code == 8) {
-                    return .{ .transform = KeyDef{ .key_idx = key_idx, .behavior = .{ .key_press = .{ .key_code = 0x2A } } } };
-                }
                 if (key_idx == key_ev.key_idx) {
                     ev.markHandled();
                     eif.handleKeycode(self.key_code, key_ev.down);
                     return if (key_ev.down) .block else .complete;
                 }
             },
+            else => {},
         }
         return .pass;
+    }
+};
+
+const HoldTapBehavior = struct {
+    hold_keycode: u16 = 0xE0,
+    tap_keycode: u16 = 0x08,
+    timeout_ms: u16 = 200,
+    timeout_token: ?engine.ScheduleToken = null,
+
+    const Self = @This();
+
+    fn parse() Self {
+        return .{};
+    }
+
+    fn process(self: *Self, key_idx: KeyIndex, eif: *const engine.Interface, ev: *engine.Event) engine.ProcessResult {
+        const hold_decision = .{ .transform = keyPressDef(key_idx, self.hold_keycode) };
+        const tap_decision = .{ .transform = keyPressDef(key_idx, self.tap_keycode) };
+
+        switch (ev.data) {
+            .key => |key_ev| {
+                if (key_idx == key_ev.key_idx) {
+                    if (key_ev.down) {
+                        if (self.timeout_token == null)
+                            self.timeout_token = eif.scheduleTimeEvent(self.timeout_ms);
+                    } else {
+                        return tap_decision;
+                    }
+                } else {
+                    return hold_decision;
+                }
+            },
+            .time => |time_ev| {
+                if (time_ev.token == self.timeout_token) {
+                    ev.markHandled();
+                    return hold_decision;
+                }
+            },
+        }
+        return .block;
+    }
+
+    fn keyPressDef(key_idx: KeyIndex, keycode: u16) KeyDef {
+        return .{
+            .key_idx = key_idx,
+            .behavior = .{ .key_press = .{ .key_code = keycode } },
+        };
     }
 };

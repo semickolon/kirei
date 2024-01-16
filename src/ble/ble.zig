@@ -177,7 +177,7 @@ fn enterSleep(time: u32) callconv(.C) u32 {
     // TODO: Something about HSE current for stability? Not sure.
     // HSECFG_Current(HSE_RCur_100);
 
-    // config.sys.led_1.toggle();
+    config.sys.led_1.toggle();
     return 0;
 }
 
