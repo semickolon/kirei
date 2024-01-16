@@ -14,7 +14,7 @@ pub const engine = .{
         3, 0, 0x1C, 0,
         3, 0, 0x18, 0,
         3, 0, 0x0C, 0,
-        3, 0, 0xE3, 0,
+        3, 0, 0xE1, 0,
     },
     .key_event_queue_size = 32,
     .report_queue_size = 16,

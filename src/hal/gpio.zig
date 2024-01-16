@@ -22,7 +22,7 @@ const port_a = Port{
         .interrupt_flag = Reg16.init(0x4000109C),
     },
     .interrupt_num = .gpio_a,
-    .interrupt_triggered = @ptrCast(&pa_int_trig),
+    .interrupt_triggered = &pa_int_trig,
 };
 
 const port_b = Port{
@@ -37,7 +37,7 @@ const port_b = Port{
         .interrupt_flag = Reg16.init(0x4000109E),
     },
     .interrupt_num = .gpio_b,
-    .interrupt_triggered = @ptrCast(&pb_int_trig),
+    .interrupt_triggered = &pb_int_trig,
 };
 
 const Port = struct {

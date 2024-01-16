@@ -9,10 +9,6 @@ const Duration = @import("duration.zig").Duration;
 const key_count = config.engine.key_map.len;
 const matrix = config.kscan.matrix;
 
-const PhysicalKeyState = packed struct {
-    debounce_counter: u2 = 0,
-};
-
 const blueprint = tmos.TaskBlueprint{
     .Event = enum(u4) { scan },
     .events_callback = &.{scan},
@@ -22,7 +18,7 @@ var task: tmos.Task(blueprint.Event) = undefined;
 const scan_interval = Duration.fromMicros(tmos.SYSTEM_TIME_US * config.kscan.scan_interval);
 
 var scanning = false;
-var key_states: [key_count]PhysicalKeyState = .{.{}} ** key_count;
+var debounce_counters = std.PackedIntArray(u2, key_count).initAllTo(0);
 
 pub fn init() void {
     task = tmos.register(blueprint);
@@ -83,25 +79,25 @@ pub fn scan() void {
 
         for (matrix.rows, 0..) |row, j| {
             const key_idx = (j * matrix.cols.len) + i;
-            const ks = &key_states[key_idx];
+            const last_counter = debounce_counters.get(key_idx);
 
-            const new_counter = if (row.read())
-                ks.debounce_counter +| 1
+            const counter = if (row.read())
+                last_counter +| 1
             else
-                ks.debounce_counter -| 1;
+                last_counter -| 1;
 
-            if (new_counter == ks.debounce_counter)
+            if (last_counter == counter)
                 continue;
 
-            ks.debounce_counter = new_counter;
+            debounce_counters.set(key_idx, counter);
 
-            if (ks.debounce_counter != 0) {
+            if (counter != 0) {
                 all_keys_released = false;
             }
 
-            if (switch (ks.debounce_counter) {
+            if (switch (counter) {
                 0 => false,
-                std.math.maxInt(@TypeOf(ks.debounce_counter)) => true,
+                std.math.maxInt(@TypeOf(debounce_counters).Child) => true,
                 else => null,
             }) |is_down| {
                 engine.pushKeyEvent(@truncate(key_idx), is_down);
