@@ -5,7 +5,7 @@ const TxPower = @import("ble/ble.zig").TxPower;
 
 pub const engine = .{
     .key_map = [_]u8{
-        3, 0, 0x14, 0,
+        3, 2, 0x14, 0,
         3, 0, 0x1A, 0,
         // 3, 0, 0x08, 0,
         3, 1, 0,    0,

@@ -30,10 +30,15 @@ pub const Interface = struct {
     scheduleTimeEvent: *const fn (duration: TimeMillis) ScheduleToken,
 };
 
+var event_id_counter: Event.Id = 0;
+
 pub const Event = struct {
+    id: Id,
     data: Data,
     time: TimeMillis = 0,
     handled: bool = false,
+
+    pub const Id = u32; // TODO: Can we make this smaller? How do we handle overflow?
 
     pub const Data = union(enum) {
         key: KeyEvent,
@@ -41,7 +46,9 @@ pub const Event = struct {
     };
 
     fn init(data: Data) Event {
+        event_id_counter +%= 1;
         return Event{
+            .id = event_id_counter,
             .data = data,
             .time = getTimeMillis(),
         };
@@ -89,6 +96,12 @@ fn processEvents() !void {
 
         while (kd_idx < key_defs.size) {
             const key_def = key_defs.at(kd_idx);
+
+            if (ev.id <= key_def.last_processed_event_id) {
+                kd_idx += 1;
+                continue;
+            }
+
             const result = key_def.process(&interface, ev);
             const is_ev_handled = ev.isHandled();
 
@@ -105,7 +118,6 @@ fn processEvents() !void {
                 },
                 .complete => {
                     _ = key_defs.remove(kd_idx);
-                    ev_idx = 0;
                 },
             }
 
