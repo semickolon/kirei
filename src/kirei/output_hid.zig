@@ -1,5 +1,6 @@
 const std = @import("std");
 const config = @import("config.zig");
+const engine = @import("engine.zig");
 
 const REPORT_QUEUE_CAPACITY = config.report_queue_size;
 
@@ -44,7 +45,7 @@ pub fn pushHidEvent(code: u8, down: bool) !void {
     }
 }
 
-pub fn sendReports(comptime impl: @import("engine.zig").Implementation) void {
+pub fn sendReports(comptime impl: engine.Implementation) void {
     while (report_queue.peek()) |head| {
         if (impl.onReportPush(head)) {
             _ = report_queue.pop();

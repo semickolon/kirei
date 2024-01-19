@@ -1,5 +1,5 @@
 const std = @import("std");
-const c = @import("../lib/ch583.zig");
+const c = @import("../lib.zig");
 const config = @import("../config.zig");
 
 const n = @import("assigned_numbers.zig");

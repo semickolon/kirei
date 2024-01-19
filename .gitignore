@@ -17,3 +17,4 @@ zig-out/
 /build-*/
 /docgen_tmp/
 .direnv/
+.vscode/

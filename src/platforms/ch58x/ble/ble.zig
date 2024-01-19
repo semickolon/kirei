@@ -1,7 +1,7 @@
 const std = @import("std");
-const c = @import("../lib/ch583.zig");
+const c = @import("../lib.zig");
 const config = @import("../config.zig");
-const UUID = @import("../lib/uuid.zig").UUID;
+const UUID = @import("uuid.zig").UUID;
 const tmos = @import("tmos.zig");
 
 const systick = @import("../hal/systick.zig");

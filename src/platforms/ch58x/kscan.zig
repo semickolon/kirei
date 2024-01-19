@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const config = @import("config.zig");
+const interface = @import("interface.zig");
 const tmos = @import("ble/tmos.zig");
 const common = @import("hal/common.zig");
 const Duration = @import("duration.zig").Duration;
@@ -99,7 +100,7 @@ pub fn scan() void {
                 std.math.maxInt(@TypeOf(debounce_counters).Child) => true,
                 else => null,
             }) |is_down| {
-                @import("main.zig").pushKeyEvent(@truncate(key_idx), is_down);
+                interface.pushKeyEvent(@truncate(key_idx), is_down);
             }
         }
 

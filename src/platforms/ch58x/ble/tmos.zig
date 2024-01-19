@@ -1,4 +1,4 @@
-const c = @import("../lib/ch583.zig");
+const c = @import("../lib.zig");
 
 const Duration = @import("../duration.zig").Duration;
 

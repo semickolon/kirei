@@ -14,7 +14,7 @@ Requirements:
 - `zig` 0.11.0
 - `wchisp` nightly
 
-Edit `src/config.zig` for matrix and keymap definition.
+Edit `src/kirei/config.zig` and `src/platforms/ch58x/config.zig`
 
 ## Flashing
 

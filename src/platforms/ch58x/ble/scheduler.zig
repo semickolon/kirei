@@ -1,7 +1,9 @@
 const tmos = @import("tmos.zig");
 const rtc = @import("../hal/rtc.zig");
 const Duration = @import("../duration.zig").Duration;
-const engine = @import("core");
+
+const kirei = @import("kirei");
+const interface = @import("../interface.zig");
 
 const blueprint = tmos.TaskBlueprint{
     .Event = enum(u4) {
@@ -21,7 +23,7 @@ var tmos_task: ?tmos.Task(blueprint.Event) = null;
 
 var token: u8 = 0;
 
-pub fn scheduleCallForEngine(duration_ms: engine.TimeMillis) engine.ScheduleToken {
+pub fn scheduleCall(duration_ms: kirei.TimeMillis) kirei.ScheduleToken {
     if (tmos_task == null) {
         tmos_task = tmos.register(blueprint);
     }
@@ -42,7 +44,7 @@ pub fn scheduleCallForEngine(duration_ms: engine.TimeMillis) engine.ScheduleToke
 }
 
 fn onCall(idx: u2) void {
-    @import("../main.zig").callScheduled(idx);
+    interface.callScheduled(idx);
 }
 
 fn tmosEvtCall0() void {

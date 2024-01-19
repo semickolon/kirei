@@ -1,5 +1,5 @@
 const ble = @import("ble.zig");
-const c = @import("../lib/ch583.zig");
+const c = @import("../lib.zig");
 const n = @import("assigned_numbers.zig");
 
 pub const PnpId = packed struct {

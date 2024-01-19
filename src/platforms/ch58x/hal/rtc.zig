@@ -61,11 +61,6 @@ pub fn getTime() u32 {
     return time.*;
 }
 
-// TODO: Relocate
-pub fn getTimeMillisForEngine() u16 {
-    return @intCast((getTime() / 32000) % std.math.maxInt(u16));
-}
-
 pub fn setTimingMode(enabled: bool) void {
     common.safe_access.enable();
     mode_ctrl.timing_mode_enable = enabled;
