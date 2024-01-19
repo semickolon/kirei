@@ -1,7 +1,7 @@
 const std = @import("std");
-const config = @import("../config.zig");
+const config = @import("config.zig");
 
-const REPORT_QUEUE_CAPACITY = config.engine.report_queue_size;
+const REPORT_QUEUE_CAPACITY = config.report_queue_size;
 
 const Queue = @import("data_structs.zig").Queue;
 
@@ -44,10 +44,13 @@ pub fn pushHidEvent(code: u8, down: bool) !void {
     }
 }
 
-pub fn sendReports() void {
+pub fn sendReports(comptime impl: @import("engine.zig").Implementation) void {
     while (report_queue.peek()) |head| {
-        config.engine.callbacks.onReportPush(head) catch break;
-        _ = report_queue.pop();
+        if (impl.onReportPush(head)) {
+            _ = report_queue.pop();
+        } else {
+            break;
+        }
     }
 }
 

@@ -3,30 +3,6 @@ const gpio = @import("hal/gpio.zig");
 const P = gpio.pins;
 const TxPower = @import("ble/ble.zig").TxPower;
 
-pub const engine = .{
-    .key_map = [_]u8{
-        3, 2, 0x14, 0,
-        3, 0, 0x1A, 0,
-        // 3, 0, 0x08, 0,
-        3, 1, 0,    0,
-        3, 0, 0x15, 0,
-        3, 0, 0x17, 0,
-        3, 0, 0x1C, 0,
-        3, 0, 0x18, 0,
-        3, 0, 0x0C, 0,
-        3, 0, 0xE1, 0,
-    },
-    .key_event_queue_size = 32,
-    .report_queue_size = 16,
-    .callbacks = .{
-        .onReportPush = @import("ble/ble_dev.zig").onReportPush,
-    },
-    .functions = .{
-        .getTimeMillis = @import("hal/rtc.zig").getTimeMillisForEngine,
-        .scheduleCall = @import("ble/scheduler.zig").scheduleCallForEngine,
-    },
-};
-
 pub const kscan = .{
     .matrix = .{
         .cols = [_]gpio.Pin{ P.B15, P.B14, P.B13 },

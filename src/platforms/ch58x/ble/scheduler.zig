@@ -1,7 +1,7 @@
 const tmos = @import("tmos.zig");
 const rtc = @import("../hal/rtc.zig");
 const Duration = @import("../duration.zig").Duration;
-const engine = @import("../core/engine.zig");
+const engine = @import("core");
 
 const blueprint = tmos.TaskBlueprint{
     .Event = enum(u4) {
@@ -42,7 +42,7 @@ pub fn scheduleCallForEngine(duration_ms: engine.TimeMillis) engine.ScheduleToke
 }
 
 fn onCall(idx: u2) void {
-    engine.callScheduled(idx);
+    @import("../main.zig").callScheduled(idx);
 }
 
 fn tmosEvtCall0() void {

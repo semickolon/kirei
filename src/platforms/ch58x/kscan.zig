@@ -1,12 +1,11 @@
 const std = @import("std");
 
-const engine = @import("core/engine.zig");
 const config = @import("config.zig");
 const tmos = @import("ble/tmos.zig");
 const common = @import("hal/common.zig");
 const Duration = @import("duration.zig").Duration;
 
-const key_count = config.engine.key_map.len;
+const key_count = 9; // TODO: Hardcoded
 const matrix = config.kscan.matrix;
 
 const blueprint = tmos.TaskBlueprint{
@@ -100,7 +99,7 @@ pub fn scan() void {
                 std.math.maxInt(@TypeOf(debounce_counters).Child) => true,
                 else => null,
             }) |is_down| {
-                engine.pushKeyEvent(@truncate(key_idx), is_down);
+                @import("main.zig").pushKeyEvent(@truncate(key_idx), is_down);
             }
         }
 

@@ -108,10 +108,13 @@ fn tmosEvtStartParamUpdate() void {
     );
 }
 
-pub fn onReportPush(report: *[8]u8) !void {
+pub fn onReportPush(report: *const [8]u8) bool {
     if (conn_secure) {
-        try HidService.notify(gap_conn_handle, report);
+        HidService.notify(gap_conn_handle, report) catch return false;
+        return true;
     }
+
+    return false;
 }
 
 fn onGapStateChange(new_state: c.gapRole_States_t, event: [*c]c.gapRoleEvent_t) callconv(.C) void {

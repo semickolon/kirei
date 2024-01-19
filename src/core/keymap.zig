@@ -1,11 +1,11 @@
 const std = @import("std");
-const config = @import("../config.zig");
+const config = @import("config.zig");
 
 const engine = @import("engine.zig");
 const KeyIndex = engine.KeyIndex;
 
 pub const Keymap = struct {
-    const km = config.engine.key_map;
+    const km = config.key_map;
 
     pub fn parseKeydef(key_idx: KeyIndex) KeyDef {
         var offset: usize = 0;

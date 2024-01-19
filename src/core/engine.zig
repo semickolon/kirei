@@ -3,14 +3,14 @@ const std = @import("std");
 const Queue = @import("data_structs.zig").Queue;
 const List = @import("data_structs.zig").List;
 
-const config = @import("../config.zig");
+const config = @import("config.zig");
 const output = @import("output_hid.zig");
 
 const keymap = @import("keymap.zig");
 const KeyDef = keymap.KeyDef;
 
-const KEY_EVENT_QUEUE_CAPACITY = config.engine.key_event_queue_size;
-const KEY_COUNT = config.engine.key_map.len;
+const KEY_EVENT_QUEUE_CAPACITY = config.key_event_queue_size;
+const KEY_COUNT = config.key_map.len;
 
 pub const KeyIndex = u15;
 pub const TimeMillis = u16;
@@ -30,8 +30,6 @@ pub const Interface = struct {
     scheduleTimeEvent: *const fn (duration: TimeMillis) ScheduleToken,
 };
 
-var event_id_counter: Event.Id = 0;
-
 pub const Event = struct {
     id: Id,
     data: Data,
@@ -45,12 +43,12 @@ pub const Event = struct {
         time: TimeEvent,
     };
 
-    fn init(data: Data) Event {
-        event_id_counter +%= 1;
+    fn init(data: Data, event_id_counter: *Event.Id, time: TimeMillis) Event {
+        event_id_counter.* +%= 1;
         return Event{
-            .id = event_id_counter,
+            .id = event_id_counter.*,
             .data = data,
-            .time = getTimeMillis(),
+            .time = time,
         };
     }
 
@@ -70,111 +68,131 @@ pub const ProcessResult = union(enum) {
     transform: KeyDef,
 };
 
-const interface = Interface{
-    .handleKeycode = handleKeycode,
-    .scheduleTimeEvent = scheduleTimeEvent,
+pub const Implementation = struct {
+    onReportPush: *const fn (report: *const [8]u8) bool,
+    getTimeMillis: *const fn () TimeMillis,
+    scheduleCall: *const fn (duration: TimeMillis) ScheduleToken,
 };
 
-var key_event_queue = Queue(KeyEvent, KEY_EVENT_QUEUE_CAPACITY).init();
-var key_defs = List(KeyDef, 32).init();
-var events = List(Event, 32).init();
+pub fn Engine(comptime impl: Implementation) type {
+    return struct {
+        key_event_queue: Queue(KeyEvent, KEY_EVENT_QUEUE_CAPACITY) = Queue(KeyEvent, KEY_EVENT_QUEUE_CAPACITY).init(),
+        key_defs: List(KeyDef, 32) = List(KeyDef, 32).init(),
+        events: List(Event, 32) = List(Event, 32).init(),
+        ev_idx: usize = 0,
+        event_id_counter: Event.Id = 0,
 
-const key_map = config.engine.key_map;
-const callbacks = config.engine.callbacks;
+        const Self = @This();
 
-pub fn process() void {
-    processEvents() catch unreachable;
-    output.sendReports();
-}
+        const key_map = config.key_map;
+        const callbacks = config.callbacks;
 
-var ev_idx: usize = 0;
+        const interface = Interface{
+            .handleKeycode = handleKeycode,
+            .scheduleTimeEvent = scheduleTimeEvent,
+        };
 
-fn processEvents() !void {
-    blk_ev: while (ev_idx < events.size) {
-        const ev = events.at(ev_idx);
-        var kd_idx: usize = 0;
+        pub fn process(self: *Self) void {
+            self.processEvents() catch unreachable;
+            output.sendReports(impl);
+        }
 
-        while (kd_idx < key_defs.size) {
-            const key_def = key_defs.at(kd_idx);
+        fn processEvents(self: *Self) !void {
+            blk_ev: while (self.ev_idx < self.events.size) {
+                const ev = self.events.at(self.ev_idx);
+                var kd_idx: usize = 0;
 
-            if (ev.id <= key_def.last_processed_event_id) {
-                kd_idx += 1;
-                continue;
-            }
+                while (kd_idx < self.key_defs.size) {
+                    const key_def = self.key_defs.at(kd_idx);
 
-            const result = key_def.process(&interface, ev);
-            const is_ev_handled = ev.isHandled();
+                    if (ev.id <= key_def.last_processed_event_id) {
+                        kd_idx += 1;
+                        continue;
+                    }
 
-            if (is_ev_handled) {
-                _ = events.remove(ev_idx);
-            }
+                    const result = key_def.process(&interface, ev);
+                    const is_ev_handled = ev.isHandled();
 
-            switch (result) {
-                .pass => {},
-                .block => {},
-                .transform => |next| {
-                    key_def.* = next;
-                    ev_idx = 0;
-                },
-                .complete => {
-                    _ = key_defs.remove(kd_idx);
-                },
-            }
+                    if (is_ev_handled) {
+                        _ = self.events.remove(self.ev_idx);
+                    }
 
-            if (is_ev_handled) {
-                continue :blk_ev;
-            }
+                    switch (result) {
+                        .pass => {},
+                        .block => {},
+                        .transform => |next| {
+                            key_def.* = next;
+                            self.ev_idx = 0;
+                        },
+                        .complete => {
+                            _ = self.key_defs.remove(kd_idx);
+                        },
+                    }
 
-            switch (result) {
-                .pass => kd_idx += 1,
-                .block => {
-                    ev_idx += 1;
-                    continue :blk_ev;
-                },
-                .transform => continue :blk_ev,
-                .complete => {},
+                    if (is_ev_handled) {
+                        continue :blk_ev;
+                    }
+
+                    switch (result) {
+                        .pass => kd_idx += 1,
+                        .block => {
+                            self.ev_idx += 1;
+                            continue :blk_ev;
+                        },
+                        .transform => continue :blk_ev,
+                        .complete => {},
+                    }
+                }
+
+                // At this point, event is NOT handled. Try salvaging it. Otherwise, sayonara.
+                switch (ev.data) {
+                    .key => |key_ev| if (key_ev.down) {
+                        const key_def = keymap.Keymap.parseKeydef(key_ev.key_idx);
+                        try self.key_defs.pushBack(key_def);
+                        continue :blk_ev;
+                    },
+                    else => {},
+                }
+
+                _ = self.events.remove(self.ev_idx);
             }
         }
 
-        // At this point, event is NOT handled. Try salvaging it. Otherwise, sayonara.
-        switch (ev.data) {
-            .key => |key_ev| if (key_ev.down) {
-                const key_def = keymap.Keymap.parseKeydef(key_ev.key_idx);
-                try key_defs.pushBack(key_def);
-                continue :blk_ev;
-            },
-            else => {},
+        fn handleKeycode(keycode: u16, down: bool) void {
+            output.pushHidEvent(@truncate(keycode), down) catch unreachable;
         }
 
-        _ = events.remove(ev_idx);
-    }
-}
+        fn scheduleTimeEvent(duration: TimeMillis) ScheduleToken {
+            return impl.scheduleCall(duration);
+        }
 
-fn handleKeycode(keycode: u16, down: bool) void {
-    output.pushHidEvent(@truncate(keycode), down) catch unreachable;
-}
+        fn getTimeMillis() TimeMillis {
+            return impl.getTimeMillis();
+        }
 
-fn scheduleTimeEvent(duration: TimeMillis) ScheduleToken {
-    return config.engine.functions.scheduleCall(duration);
-}
+        pub fn callScheduled(self: *Self, token: u8) void {
+            const time_ev = Event.init(
+                .{ .time = .{ .token = token } },
+                &self.event_id_counter,
+                getTimeMillis(),
+            );
+            self.events.pushBack(time_ev) catch unreachable;
+        }
 
-fn getTimeMillis() TimeMillis {
-    return config.engine.functions.getTimeMillis();
-}
-
-pub fn callScheduled(token: u8) void {
-    const time_ev = Event.init(.{ .time = .{ .token = token } });
-    events.pushBack(time_ev) catch unreachable;
-}
-
-// Caller must guarantee that all key events are "toggles"
-// That is, caller must not report the same values of `down` consecutively (e.g. true->true, false->false)
-// That would be undefined behavior
-pub fn pushKeyEvent(key_idx: KeyIndex, down: bool) void {
-    events.pushBack(Event.init(.{
-        .key = .{
-            .key_idx = key_idx,
-            .down = down,
-        },
-    })) catch unreachable;
+        // Caller must guarantee that all key events are "toggles"
+        // That is, caller must not report the same values of `down` consecutively (e.g. true->true, false->false)
+        // That would be undefined behavior
+        pub fn pushKeyEvent(self: *Self, key_idx: KeyIndex, down: bool) void {
+            self.events.pushBack(Event.init(
+                .{
+                    .key = .{
+                        .key_idx = key_idx,
+                        .down = down,
+                    },
+                },
+                &self.event_id_counter,
+                getTimeMillis(),
+            )) catch unreachable;
+        }
+    };
 }
