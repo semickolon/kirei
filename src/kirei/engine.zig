@@ -11,7 +11,7 @@ const KeyDef = keymap.KeyDef;
 
 pub const KeyIndex = u15;
 pub const TimeMillis = u16;
-pub const ScheduleToken = u8;
+pub const ScheduleToken = u4;
 
 pub const KeyEvent = packed struct(u16) {
     key_idx: KeyIndex,
@@ -60,17 +60,16 @@ pub const ProcessResult = union(enum) {
 pub const Implementation = struct {
     onReportPush: *const fn (report: *const output.HidReport) bool,
     getTimeMillis: *const fn () TimeMillis,
-    scheduleCall: *const fn (duration: TimeMillis) ScheduleToken,
+    scheduleCall: *const fn (duration: TimeMillis, token: ScheduleToken) void,
     toggleLed: *const fn () void,
 };
-
-var t: u8 = 69;
 
 pub const Engine = struct {
     key_defs: KeyDefList = KeyDefList.init(),
     events: EventList = EventList.init(),
     ev_idx: u8 = 0,
     impl: Implementation,
+    schedule_token_counter: ScheduleToken = 0,
 
     const Self = @This();
     const KeyDefList = List(KeyDef, 64);
@@ -204,37 +203,40 @@ pub const Engine = struct {
         output.pushHidEvent(@truncate(keycode), down) catch unreachable;
     }
 
-    pub fn scheduleTimeEvent(self: *Self, time: TimeMillis) ScheduleToken {
+    pub fn scheduleTimeEvent(self: *Self, time: TimeMillis) ?ScheduleToken {
+        const token = self.schedule_token_counter;
+        self.schedule_token_counter +%= 1;
+
         const cur_time = self.impl.getTimeMillis();
-        return if (time <= cur_time)
-            self.insertRetroactiveTimeEvent(time)
+
+        if (time <= cur_time)
+            self.insertRetroactiveTimeEvent(time, token)
         else
-            self.impl.scheduleCall(time - cur_time);
+            self.impl.scheduleCall(time - cur_time, token);
+
+        return token;
     }
 
-    fn insertRetroactiveTimeEvent(self: *Self, time: TimeMillis) ScheduleToken {
+    fn insertRetroactiveTimeEvent(self: *Self, time: TimeMillis, token: ScheduleToken) void {
         for (self.events.asSlice(), 0..) |ev, i| {
             if (ev.time >= time) {
                 self.events.insert(i, .{
-                    .data = .{ .time = .{ .token = t } },
+                    .data = .{ .time = .{ .token = token } },
                     .kd_idx = ev.kd_idx,
                     .blocked = ev.blocked,
                 }) catch unreachable;
                 break;
             }
         } else {
-            self.callScheduled(t);
+            self.callScheduled(token);
         }
-
-        defer t +%= 1;
-        return t;
     }
 
     fn getTimeMillis(self: Self) TimeMillis {
         return self.impl.getTimeMillis();
     }
 
-    pub fn callScheduled(self: *Self, token: u8) void {
+    pub fn callScheduled(self: *Self, token: ScheduleToken) void {
         self.pushEvent(.{ .time = .{
             .token = token,
         } });

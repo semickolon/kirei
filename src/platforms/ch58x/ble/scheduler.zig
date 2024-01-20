@@ -11,19 +11,39 @@ const blueprint = tmos.TaskBlueprint{
         call_1,
         call_2,
         call_3,
+        call_4,
+        call_5,
+        call_6,
+        call_7,
+        call_8,
+        call_9,
+        call_10,
+        call_11,
+        call_12,
+        call_13,
+        call_14,
     },
     .events_callback = &.{
         tmosEvtCall0,
         tmosEvtCall1,
         tmosEvtCall2,
         tmosEvtCall3,
+        tmosEvtCall4,
+        tmosEvtCall5,
+        tmosEvtCall6,
+        tmosEvtCall7,
+        tmosEvtCall8,
+        tmosEvtCall9,
+        tmosEvtCall10,
+        tmosEvtCall11,
+        tmosEvtCall12,
+        tmosEvtCall13,
+        tmosEvtCall14,
     },
 };
 var tmos_task: ?tmos.Task(blueprint.Event) = null;
 
-var token: u8 = 0;
-
-pub fn scheduleCall(duration_ms: kirei.TimeMillis) kirei.ScheduleToken {
+pub fn scheduleCall(duration_ms: kirei.TimeMillis, token: kirei.ScheduleToken) void {
     if (tmos_task == null) {
         tmos_task = tmos.register(blueprint);
     }
@@ -31,19 +51,27 @@ pub fn scheduleCall(duration_ms: kirei.TimeMillis) kirei.ScheduleToken {
     const task = tmos_task.?;
     const duration = Duration.fromMillis(duration_ms);
 
-    switch (token) {
+    switch (token % 15) {
         0 => task.scheduleEvent(.call_0, duration),
         1 => task.scheduleEvent(.call_1, duration),
         2 => task.scheduleEvent(.call_2, duration),
         3 => task.scheduleEvent(.call_3, duration),
+        4 => task.scheduleEvent(.call_4, duration),
+        5 => task.scheduleEvent(.call_5, duration),
+        6 => task.scheduleEvent(.call_6, duration),
+        7 => task.scheduleEvent(.call_7, duration),
+        8 => task.scheduleEvent(.call_8, duration),
+        9 => task.scheduleEvent(.call_9, duration),
+        10 => task.scheduleEvent(.call_10, duration),
+        11 => task.scheduleEvent(.call_11, duration),
+        12 => task.scheduleEvent(.call_12, duration),
+        13 => task.scheduleEvent(.call_13, duration),
+        14 => task.scheduleEvent(.call_14, duration),
         else => unreachable,
     }
-
-    defer token = (token + 1) % 4;
-    return token;
 }
 
-fn onCall(idx: u2) void {
+fn onCall(idx: kirei.ScheduleToken) void {
     interface.callScheduled(idx);
 }
 
@@ -61,4 +89,48 @@ fn tmosEvtCall2() void {
 
 fn tmosEvtCall3() void {
     onCall(3);
+}
+
+fn tmosEvtCall4() void {
+    onCall(4);
+}
+
+fn tmosEvtCall5() void {
+    onCall(5);
+}
+
+fn tmosEvtCall6() void {
+    onCall(6);
+}
+
+fn tmosEvtCall7() void {
+    onCall(7);
+}
+
+fn tmosEvtCall8() void {
+    onCall(8);
+}
+
+fn tmosEvtCall9() void {
+    onCall(9);
+}
+
+fn tmosEvtCall10() void {
+    onCall(10);
+}
+
+fn tmosEvtCall11() void {
+    onCall(11);
+}
+
+fn tmosEvtCall12() void {
+    onCall(12);
+}
+
+fn tmosEvtCall13() void {
+    onCall(13);
+}
+
+fn tmosEvtCall14() void {
+    onCall(14);
 }

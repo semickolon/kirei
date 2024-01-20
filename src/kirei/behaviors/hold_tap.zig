@@ -12,7 +12,7 @@ const KeyDef = @import("../keymap.zig").KeyDef;
 hold_keycode: u16 = 0xE0,
 tap_keycode: u16 = 0x08,
 timeout_ms: u16 = 2000,
-timeout_token: ScheduleToken = 0,
+timeout_token: ?ScheduleToken = null,
 
 const Self = @This();
 

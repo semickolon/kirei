@@ -14,7 +14,7 @@ max_tap_count: u4 = 5,
 
 tap_counter: u8 = 0,
 resolved_tap_count: u8 = 0,
-tapping_term_token: ScheduleToken = 0,
+tapping_term_token: ?ScheduleToken = null,
 unwind: bool = false,
 
 const Self = @This();
