@@ -61,19 +61,24 @@ pub fn List(comptime T: type, comptime capacity: comptime_int) type {
         }
 
         pub fn pushFront(self: *Self, elem: T) !void {
-            if (self.size == capacity)
-                return error.Overflow;
-
-            std.mem.copyBackwards(T, self.array[1 .. self.size + 1], self.array[0..self.size]);
-            self.array[0] = elem;
-            self.size += 1;
+            try self.insert(0, elem);
         }
 
         pub fn pushBack(self: *Self, elem: T) !void {
+            try self.insert(self.size, elem);
+        }
+
+        pub fn insert(self: *Self, idx: usize, elem: T) !void {
             if (self.size == capacity)
                 return error.Overflow;
+            if (idx > self.size)
+                return error.InvalidIndex;
 
-            self.array[self.size] = elem;
+            if (idx < self.size) {
+                std.mem.copyBackwards(T, self.array[idx + 1 .. self.size + 1], self.array[idx..self.size]);
+            }
+
+            self.array[idx] = elem;
             self.size += 1;
         }
 

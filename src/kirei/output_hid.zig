@@ -45,7 +45,7 @@ pub fn pushHidEvent(code: u8, down: bool) !void {
     }
 }
 
-pub fn sendReports(comptime impl: engine.Implementation) void {
+pub fn sendReports(impl: engine.Implementation) void {
     while (report_queue.peek()) |head| {
         if (impl.onReportPush(head)) {
             _ = report_queue.pop();

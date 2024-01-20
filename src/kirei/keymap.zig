@@ -44,7 +44,7 @@ pub const KeyDef = struct {
         };
     }
 
-    pub fn process(self: *Self, comptime eif: engine.Interface, ev: *engine.Event) engine.ProcessResult {
+    pub fn process(self: *Self, eif: *engine.Engine, ev: *engine.Event) engine.ProcessResult {
         return switch (self.behavior) {
             inline else => |*behavior| behavior.process(self.key_idx, eif, ev),
         };
@@ -60,7 +60,7 @@ const KeyPressBehavior = struct {
         return .{ .key_code = std.mem.readInt(u16, bytes[0..2], .Little) };
     }
 
-    fn process(self: *Self, key_idx: KeyIndex, comptime eif: engine.Interface, ev: *engine.Event) engine.ProcessResult {
+    fn process(self: *Self, key_idx: KeyIndex, eif: *engine.Engine, ev: *engine.Event) engine.ProcessResult {
         switch (ev.data) {
             .key => |key_ev| {
                 if (key_idx == key_ev.key_idx) {
@@ -78,7 +78,7 @@ const KeyPressBehavior = struct {
 const HoldTapBehavior = struct {
     hold_keycode: u16 = 0xE0,
     tap_keycode: u16 = 0x08,
-    timeout_ms: u16 = 200,
+    timeout_ms: u16 = 2000,
     timeout_token: engine.ScheduleToken = 0,
 
     const Self = @This();
@@ -87,8 +87,8 @@ const HoldTapBehavior = struct {
         return .{};
     }
 
-    fn process(self: *Self, key_idx: KeyIndex, comptime eif: engine.Interface, ev: *engine.Event) engine.ProcessResult {
-        const hold_decision = .{ .transform = keyPressDef(key_idx, self.hold_keycode) };
+    fn process(self: *Self, key_idx: KeyIndex, eif: *engine.Engine, ev: *engine.Event) engine.ProcessResult {
+        const hold_decision = .{ .transform = keyPressDef(key_idx, 'z' - 'a' + 4) };
         const tap_decision = .{ .transform = keyPressDef(key_idx, self.tap_keycode) };
 
         // TODO: Nested hold-taps are not yet time-aware
@@ -96,12 +96,12 @@ const HoldTapBehavior = struct {
             .key => |key_ev| {
                 if (key_idx == key_ev.key_idx) {
                     if (key_ev.down) {
-                        self.timeout_token = eif.scheduleTimeEvent(self.timeout_ms);
+                        self.timeout_token = eif.scheduleTimeEvent(ev.time + self.timeout_ms);
                     } else {
                         return tap_decision;
                     }
                 } else {
-                    return hold_decision;
+                    // return hold_decision;
                 }
             },
             .time => |time_ev| {
@@ -137,7 +137,7 @@ const TapDanceBehavior = struct {
         return .{};
     }
 
-    fn process(self: *Self, key_idx: KeyIndex, comptime eif: engine.Interface, ev: *engine.Event) engine.ProcessResult {
+    fn process(self: *Self, key_idx: KeyIndex, eif: *engine.Engine, ev: *engine.Event) engine.ProcessResult {
         if (self.unwind) {
             switch (ev.data) {
                 .key => |key_ev| if (key_idx == key_ev.key_idx) {
@@ -169,7 +169,7 @@ const TapDanceBehavior = struct {
         return .block;
     }
 
-    fn tally(self: *Self, key_idx: KeyIndex, comptime eif: engine.Interface, ev: *engine.Event) bool {
+    fn tally(self: *Self, key_idx: KeyIndex, eif: *engine.Engine, ev: *engine.Event) bool {
         switch (ev.data) {
             .key => |key_ev| {
                 if (key_idx == key_ev.key_idx) {
@@ -178,7 +178,7 @@ const TapDanceBehavior = struct {
 
                         if (self.tap_counter < self.max_tap_count) {
                             // TODO: This will keep scheduling. Provide API for rescheduling using the same token.
-                            self.tapping_term_token = eif.scheduleTimeEvent(self.tapping_term_ms);
+                            self.tapping_term_token = eif.scheduleTimeEvent(ev.time + self.tapping_term_ms);
                         } else {
                             return true;
                         }

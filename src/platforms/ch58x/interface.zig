@@ -5,12 +5,12 @@ const ble_dev = @import("ble/ble_dev.zig");
 const rtc = @import("hal/rtc.zig");
 const scheduler = @import("ble/scheduler.zig");
 
-var engine = kirei.Engine(.{
+var engine = kirei.Engine.init(.{
     .onReportPush = ble_dev.onReportPush,
     .getTimeMillis = getTimeMillis,
     .scheduleCall = scheduler.scheduleCall,
     .toggleLed = toggleLed,
-}){};
+});
 
 pub fn process() void {
     engine.process();
@@ -25,7 +25,7 @@ pub fn pushKeyEvent(key_idx: kirei.KeyIndex, down: bool) void {
 }
 
 fn getTimeMillis() kirei.TimeMillis {
-    return @intCast((rtc.getTime() / 32000) % std.math.maxInt(u16));
+    return @intCast((rtc.getTime() / 32) % std.math.maxInt(u16));
 }
 
 fn toggleLed() void {
