@@ -11,6 +11,7 @@ var engine = kirei.Engine.init(.{
     .scheduleCall = scheduler.scheduleCall,
     .cancelCall = scheduler.cancelCall,
     .toggleLed = toggleLed,
+    .readKeymapBytes = readKeymapBytes,
 });
 
 pub fn process() void {
@@ -31,4 +32,8 @@ fn getTimeMillis() kirei.TimeMillis {
 
 fn toggleLed() void {
     @import("config.zig").sys.led_1.toggle();
+}
+
+fn readKeymapBytes(offset: usize, len: usize) []const u8 {
+    return @import("config.zig").key_map[offset .. offset + len];
 }

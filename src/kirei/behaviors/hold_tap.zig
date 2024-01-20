@@ -24,7 +24,6 @@ pub fn process(self: *Self, key_idx: KeyIndex, engine: *Engine, ev: *Event) Proc
     const hold_decision = .{ .transform = keyPressDef(key_idx, self.hold_keycode) };
     const tap_decision = .{ .transform = keyPressDef(key_idx, self.tap_keycode) };
 
-    // TODO: Nested hold-taps are not yet time-aware
     switch (ev.data) {
         .key => |key_ev| {
             if (key_idx == key_ev.key_idx) {
@@ -35,7 +34,7 @@ pub fn process(self: *Self, key_idx: KeyIndex, engine: *Engine, ev: *Event) Proc
                     return tap_decision;
                 }
             } else {
-                // return hold_decision;
+                return hold_decision;
             }
         },
         .time => |time_ev| {

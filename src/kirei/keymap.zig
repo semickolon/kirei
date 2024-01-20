@@ -7,20 +7,25 @@ const Engine = eng.Engine;
 const ScheduleToken = eng.ScheduleToken;
 const Event = eng.Event;
 const ProcessResult = eng.ProcessResult;
+const Implementation = eng.Implementation;
 
 pub const Keymap = struct {
-    const km = config.key_map;
+    impl: Implementation,
 
-    pub fn parseKeydef(key_idx: KeyIndex) KeyDef {
+    pub fn init(comptime impl: Implementation) Keymap {
+        return .{ .impl = impl };
+    }
+
+    pub fn parseKeydef(self: Keymap, key_idx: KeyIndex) KeyDef {
         var offset: usize = 0;
         var i = key_idx;
 
         while (i > 0) : (i -= 1) {
-            offset += km[offset] + 1;
+            offset += self.impl.readKeymapBytes(offset, 1)[0] + 1;
         }
 
-        var len: usize = km[offset];
-        return KeyDef.parse(key_idx, km[offset + 1 .. offset + 1 + len]);
+        var len: usize = self.impl.readKeymapBytes(offset, 1)[0];
+        return KeyDef.parse(key_idx, self.impl.readKeymapBytes(offset + 1, len));
     }
 };
 

@@ -2,8 +2,6 @@ const std = @import("std");
 const config = @import("config.zig");
 const engine = @import("engine.zig");
 
-const REPORT_QUEUE_CAPACITY = config.report_queue_size;
-
 const Queue = @import("data_structs.zig").Queue;
 
 pub const HidReport = [8]u8;
@@ -14,7 +12,7 @@ var report = std.mem.zeroes(HidReport);
 const report_mods: *HidReportMods = @ptrCast(&report[0]);
 const report_codes: *HidReportCodes = report[2..];
 
-var report_queue = Queue(HidReport, REPORT_QUEUE_CAPACITY).init();
+var report_queue = Queue(HidReport, 16).init();
 
 pub fn pushHidEvent(code: u8, down: bool) !void {
     var dirty = false;

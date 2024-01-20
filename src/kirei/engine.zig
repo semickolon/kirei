@@ -7,10 +7,12 @@ const config = @import("config.zig");
 const output = @import("output_hid.zig");
 
 const keymap = @import("keymap.zig");
+const Keymap = keymap.Keymap;
 const KeyDef = keymap.KeyDef;
 
 pub const KeyIndex = u15;
 pub const TimeMillis = u16;
+// TODO: Scheduler needs more work. 16 tokens might be prone to collision on greedy blocking behaviors.
 pub const ScheduleToken = u4;
 
 pub const KeyEvent = packed struct(u16) {
@@ -63,9 +65,11 @@ pub const Implementation = struct {
     scheduleCall: *const fn (duration: TimeMillis, token: ScheduleToken) void,
     cancelCall: *const fn (token: ScheduleToken) void,
     toggleLed: *const fn () void,
+    readKeymapBytes: *const fn (offset: usize, len: usize) []const u8,
 };
 
 pub const Engine = struct {
+    keymap: Keymap,
     key_defs: KeyDefList = KeyDefList.init(),
     events: EventList = EventList.init(),
     ev_idx: u8 = 0,
@@ -80,7 +84,10 @@ pub const Engine = struct {
     const callbacks = config.callbacks;
 
     pub fn init(comptime impl: Implementation) Self {
-        return Self{ .impl = impl };
+        return Self{
+            .impl = impl,
+            .keymap = Keymap.init(impl),
+        };
     }
 
     pub fn process(self: *Self) void {
@@ -188,7 +195,7 @@ pub const Engine = struct {
             // At this point, event is NOT handled. Try salvaging it. Otherwise, sayonara.
             switch (ev.data) {
                 .key => |key_ev| if (key_ev.down) {
-                    const key_def = keymap.Keymap.parseKeydef(key_ev.key_idx);
+                    const key_def = self.keymap.parseKeydef(key_ev.key_idx);
                     try self.key_defs.pushBack(key_def);
                     continue :blk_ev;
                 },
