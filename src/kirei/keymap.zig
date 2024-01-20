@@ -44,8 +44,7 @@ pub const KeyDef = struct {
         };
     }
 
-    // TODO: `eif` can probably be comptime-known
-    pub fn process(self: *Self, eif: *const engine.Interface, ev: *engine.Event) engine.ProcessResult {
+    pub fn process(self: *Self, comptime eif: engine.Interface, ev: *engine.Event) engine.ProcessResult {
         return switch (self.behavior) {
             inline else => |*behavior| behavior.process(self.key_idx, eif, ev),
         };
@@ -61,7 +60,7 @@ const KeyPressBehavior = struct {
         return .{ .key_code = std.mem.readInt(u16, bytes[0..2], .Little) };
     }
 
-    fn process(self: *Self, key_idx: KeyIndex, eif: *const engine.Interface, ev: *engine.Event) engine.ProcessResult {
+    fn process(self: *Self, key_idx: KeyIndex, comptime eif: engine.Interface, ev: *engine.Event) engine.ProcessResult {
         switch (ev.data) {
             .key => |key_ev| {
                 if (key_idx == key_ev.key_idx) {
@@ -88,7 +87,7 @@ const HoldTapBehavior = struct {
         return .{};
     }
 
-    fn process(self: *Self, key_idx: KeyIndex, eif: *const engine.Interface, ev: *engine.Event) engine.ProcessResult {
+    fn process(self: *Self, key_idx: KeyIndex, comptime eif: engine.Interface, ev: *engine.Event) engine.ProcessResult {
         const hold_decision = .{ .transform = keyPressDef(key_idx, self.hold_keycode) };
         const tap_decision = .{ .transform = keyPressDef(key_idx, self.tap_keycode) };
 
@@ -138,7 +137,7 @@ const TapDanceBehavior = struct {
         return .{};
     }
 
-    fn process(self: *Self, key_idx: KeyIndex, eif: *const engine.Interface, ev: *engine.Event) engine.ProcessResult {
+    fn process(self: *Self, key_idx: KeyIndex, comptime eif: engine.Interface, ev: *engine.Event) engine.ProcessResult {
         if (self.unwind) {
             switch (ev.data) {
                 .key => |key_ev| if (key_idx == key_ev.key_idx) {
@@ -170,7 +169,7 @@ const TapDanceBehavior = struct {
         return .block;
     }
 
-    fn tally(self: *Self, key_idx: KeyIndex, eif: *const engine.Interface, ev: *engine.Event) bool {
+    fn tally(self: *Self, key_idx: KeyIndex, comptime eif: engine.Interface, ev: *engine.Event) bool {
         switch (ev.data) {
             .key => |key_ev| {
                 if (key_idx == key_ev.key_idx) {

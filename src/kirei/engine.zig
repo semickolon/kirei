@@ -131,7 +131,7 @@ pub fn Engine(comptime impl: Implementation) type {
 
                 while (kd_idx < self.key_defs.size) {
                     const key_def = self.key_defs.at(kd_idx);
-                    const result = key_def.process(&interface, ev);
+                    const result = key_def.process(interface, ev);
                     const is_ev_handled = ev.isHandled();
 
                     if (is_ev_handled) {
