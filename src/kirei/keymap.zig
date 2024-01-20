@@ -24,6 +24,10 @@ pub const Keymap = struct {
     }
 };
 
+pub const KeyPressBehavior = @import("behaviors/key_press.zig");
+pub const HoldTapBehavior = @import("behaviors/hold_tap.zig");
+pub const TapDanceBehavior = @import("behaviors/tap_dance.zig");
+
 pub const KeyDef = struct {
     key_idx: KeyIndex,
     behavior: Behavior,
@@ -51,158 +55,6 @@ pub const KeyDef = struct {
     pub fn process(self: *Self, engine: *Engine, ev: *Event) ProcessResult {
         return switch (self.behavior) {
             inline else => |*behavior| behavior.process(self.key_idx, engine, ev),
-        };
-    }
-};
-
-const KeyPressBehavior = struct {
-    key_code: u16,
-
-    const Self = @This();
-
-    fn parse(bytes: []const u8) Self {
-        return .{ .key_code = std.mem.readInt(u16, bytes[0..2], .Little) };
-    }
-
-    fn process(self: *Self, key_idx: KeyIndex, engine: *Engine, ev: *Event) ProcessResult {
-        switch (ev.data) {
-            .key => |key_ev| {
-                if (key_idx == key_ev.key_idx) {
-                    ev.markHandled();
-                    engine.handleKeycode(self.key_code, key_ev.down);
-                    return if (key_ev.down) .block else .complete;
-                }
-            },
-            else => {},
-        }
-        return .pass;
-    }
-};
-
-const HoldTapBehavior = struct {
-    hold_keycode: u16 = 0xE0,
-    tap_keycode: u16 = 0x08,
-    timeout_ms: u16 = 2000,
-    timeout_token: ScheduleToken = 0,
-
-    const Self = @This();
-
-    fn parse() Self {
-        return .{};
-    }
-
-    fn process(self: *Self, key_idx: KeyIndex, engine: *Engine, ev: *Event) ProcessResult {
-        const hold_decision = .{ .transform = keyPressDef(key_idx, 'z' - 'a' + 4) };
-        const tap_decision = .{ .transform = keyPressDef(key_idx, self.tap_keycode) };
-
-        // TODO: Nested hold-taps are not yet time-aware
-        switch (ev.data) {
-            .key => |key_ev| {
-                if (key_idx == key_ev.key_idx) {
-                    if (key_ev.down) {
-                        self.timeout_token = engine.scheduleTimeEvent(ev.time + self.timeout_ms);
-                    } else {
-                        return tap_decision;
-                    }
-                } else {
-                    // return hold_decision;
-                }
-            },
-            .time => |time_ev| {
-                if (time_ev.token == self.timeout_token) {
-                    ev.markHandled();
-                    return hold_decision;
-                }
-            },
-        }
-        return .block;
-    }
-
-    fn keyPressDef(key_idx: KeyIndex, keycode: u16) KeyDef {
-        return .{
-            .key_idx = key_idx,
-            .behavior = .{ .key_press = .{ .key_code = keycode } },
-        };
-    }
-};
-
-const TapDanceBehavior = struct {
-    tapping_term_ms: u12 = 250,
-    max_tap_count: u4 = 5,
-
-    tap_counter: u8 = 0,
-    resolved_tap_count: u8 = 0,
-    tapping_term_token: ScheduleToken = 0,
-    unwind: bool = false,
-
-    const Self = @This();
-
-    fn parse() Self {
-        return .{};
-    }
-
-    fn process(self: *Self, key_idx: KeyIndex, engine: *Engine, ev: *Event) ProcessResult {
-        if (self.unwind) {
-            switch (ev.data) {
-                .key => |key_ev| if (key_idx == key_ev.key_idx) {
-                    ev.markHandled();
-                    if (!key_ev.down) {
-                        self.tap_counter -= 1;
-                    }
-                },
-                else => {},
-            }
-
-            if (self.tap_counter == 1) {
-                return .{ .transform = keyPressDef(key_idx, 4 + self.resolved_tap_count - 1) };
-            }
-        } else {
-            self.unwind = self.tally(key_idx, engine, ev);
-
-            if (self.unwind) {
-                self.resolved_tap_count = self.tap_counter;
-
-                return if (self.resolved_tap_count == 1)
-                    .{ .transform = keyPressDef(key_idx, 4) }
-                else if (self.resolved_tap_count > 1)
-                    .{ .transform = KeyDef{ .key_idx = key_idx, .behavior = .{ .tap_dance = self.* } } }
-                else
-                    .complete;
-            }
-        }
-        return .block;
-    }
-
-    fn tally(self: *Self, key_idx: KeyIndex, engine: *Engine, ev: *Event) bool {
-        switch (ev.data) {
-            .key => |key_ev| {
-                if (key_idx == key_ev.key_idx) {
-                    if (key_ev.down) {
-                        self.tap_counter += 1;
-
-                        if (self.tap_counter < self.max_tap_count) {
-                            // TODO: This will keep scheduling. Provide API for rescheduling using the same token.
-                            self.tapping_term_token = engine.scheduleTimeEvent(ev.time + self.tapping_term_ms);
-                        } else {
-                            return true;
-                        }
-                    }
-                } else {
-                    return true;
-                }
-            },
-            .time => |time_ev| if (time_ev.token == self.tapping_term_token) {
-                ev.markHandled();
-                return true;
-            },
-        }
-        return false;
-    }
-
-    fn keyPressDef(key_idx: KeyIndex, keycode: u16) KeyDef {
-        return .{
-            .key_idx = key_idx,
-            .behavior = .{ .key_press = .{ .key_code = keycode } },
         };
     }
 };
