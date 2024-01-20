@@ -71,6 +71,28 @@ pub fn scheduleCall(duration_ms: kirei.TimeMillis, token: kirei.ScheduleToken) v
     }
 }
 
+pub fn cancelCall(token: kirei.ScheduleToken) void {
+    const task = tmos_task.?;
+    switch (token % 15) {
+        0 => task.cancelEvent(.call_0),
+        1 => task.cancelEvent(.call_1),
+        2 => task.cancelEvent(.call_2),
+        3 => task.cancelEvent(.call_3),
+        4 => task.cancelEvent(.call_4),
+        5 => task.cancelEvent(.call_5),
+        6 => task.cancelEvent(.call_6),
+        7 => task.cancelEvent(.call_7),
+        8 => task.cancelEvent(.call_8),
+        9 => task.cancelEvent(.call_9),
+        10 => task.cancelEvent(.call_10),
+        11 => task.cancelEvent(.call_11),
+        12 => task.cancelEvent(.call_12),
+        13 => task.cancelEvent(.call_13),
+        14 => task.cancelEvent(.call_14),
+        else => unreachable,
+    }
+}
+
 fn onCall(idx: kirei.ScheduleToken) void {
     interface.callScheduled(idx);
 }

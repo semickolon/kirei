@@ -9,6 +9,7 @@ var engine = kirei.Engine.init(.{
     .onReportPush = ble_dev.onReportPush,
     .getTimeMillis = getTimeMillis,
     .scheduleCall = scheduler.scheduleCall,
+    .cancelCall = scheduler.cancelCall,
     .toggleLed = toggleLed,
 });
 

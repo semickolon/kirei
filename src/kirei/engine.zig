@@ -61,6 +61,7 @@ pub const Implementation = struct {
     onReportPush: *const fn (report: *const output.HidReport) bool,
     getTimeMillis: *const fn () TimeMillis,
     scheduleCall: *const fn (duration: TimeMillis, token: ScheduleToken) void,
+    cancelCall: *const fn (token: ScheduleToken) void,
     toggleLed: *const fn () void,
 };
 
@@ -215,6 +216,10 @@ pub const Engine = struct {
             self.impl.scheduleCall(time - cur_time, token);
 
         return token;
+    }
+
+    pub fn cancelTimeEvent(self: *Self, token: ScheduleToken) void {
+        self.impl.cancelCall(token);
     }
 
     fn insertRetroactiveTimeEvent(self: *Self, time: TimeMillis, token: ScheduleToken) void {

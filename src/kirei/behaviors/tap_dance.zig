@@ -63,7 +63,7 @@ fn tally(self: *Self, key_idx: KeyIndex, engine: *Engine, ev: *Event) bool {
                     self.tap_counter += 1;
 
                     if (self.tap_counter < self.max_tap_count) {
-                        // TODO: This will keep scheduling. Provide API for rescheduling using the same token.
+                        if (self.tapping_term_token) |token| engine.cancelTimeEvent(token);
                         self.tapping_term_token = engine.scheduleTimeEvent(ev.time + self.tapping_term_ms);
                     } else {
                         return true;

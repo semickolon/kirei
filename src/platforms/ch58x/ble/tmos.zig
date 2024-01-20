@@ -45,6 +45,10 @@ pub fn Task(comptime EventEnum: type) type {
             _ = c.tmos_start_task(self.id, eventToNative(event), asTmosTime(duration));
         }
 
+        pub fn cancelEvent(self: Self, comptime event: Event) void {
+            _ = c.tmos_stop_task(self.id, eventToNative(event));
+        }
+
         pub fn setEvent(self: Self, comptime event: Event) void {
             _ = c.tmos_set_event(self.id, eventToNative(event));
         }

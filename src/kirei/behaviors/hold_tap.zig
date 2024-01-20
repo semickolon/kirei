@@ -21,7 +21,7 @@ pub fn parse() Self {
 }
 
 pub fn process(self: *Self, key_idx: KeyIndex, engine: *Engine, ev: *Event) ProcessResult {
-    const hold_decision = .{ .transform = keyPressDef(key_idx, 'z' - 'a' + 4) };
+    const hold_decision = .{ .transform = keyPressDef(key_idx, self.hold_keycode) };
     const tap_decision = .{ .transform = keyPressDef(key_idx, self.tap_keycode) };
 
     // TODO: Nested hold-taps are not yet time-aware
@@ -29,6 +29,7 @@ pub fn process(self: *Self, key_idx: KeyIndex, engine: *Engine, ev: *Event) Proc
         .key => |key_ev| {
             if (key_idx == key_ev.key_idx) {
                 if (key_ev.down) {
+                    if (self.timeout_token) |token| engine.cancelTimeEvent(token);
                     self.timeout_token = engine.scheduleTimeEvent(ev.time + self.timeout_ms);
                 } else {
                     return tap_decision;
