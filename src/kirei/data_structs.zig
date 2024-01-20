@@ -60,6 +60,10 @@ pub fn List(comptime T: type, comptime capacity: comptime_int) type {
             return .{};
         }
 
+        pub fn asSlice(self: *Self) []T {
+            return self.array[0..self.size];
+        }
+
         pub fn pushFront(self: *Self, elem: T) !void {
             try self.insert(0, elem);
         }

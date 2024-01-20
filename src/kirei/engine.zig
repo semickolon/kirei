@@ -95,7 +95,7 @@ pub const Engine = struct {
     fn unblockEvents(self: *Self, kd_idx: u6, pass_to_next_kd: bool) ?u8 {
         var first_blocked_ev_idx: ?u8 = null;
 
-        for (self.events.array[0..self.events.size], 0..) |*event, i| {
+        for (self.events.asSlice(), 0..) |*event, i| {
             if (event.kd_idx == kd_idx and event.blocked) {
                 event.blocked = false;
 
@@ -146,7 +146,7 @@ pub const Engine = struct {
                     .complete => {
                         const first_blocked_ev_idx = self.unblockEvents(kd_idx, false);
 
-                        for (self.events.array[0..self.events.size]) |*event| {
+                        for (self.events.asSlice()) |*event| {
                             if (event.kd_idx > kd_idx)
                                 event.kd_idx -= 1;
                         }
@@ -206,26 +206,28 @@ pub const Engine = struct {
 
     pub fn scheduleTimeEvent(self: *Self, time: TimeMillis) ScheduleToken {
         const cur_time = self.impl.getTimeMillis();
+        return if (time <= cur_time)
+            self.insertRetroactiveTimeEvent(time)
+        else
+            self.impl.scheduleCall(time - cur_time);
+    }
 
-        if (time <= cur_time) {
-            for (self.events.array[0..self.events.size], 0..) |ev, i| {
-                if (ev.time >= time) {
-                    self.events.insert(i, .{
-                        .data = .{ .time = .{ .token = t } },
-                        .kd_idx = ev.kd_idx,
-                        .blocked = ev.blocked,
-                    }) catch unreachable;
-                    break;
-                }
-            } else {
-                self.callScheduled(t);
+    fn insertRetroactiveTimeEvent(self: *Self, time: TimeMillis) ScheduleToken {
+        for (self.events.asSlice(), 0..) |ev, i| {
+            if (ev.time >= time) {
+                self.events.insert(i, .{
+                    .data = .{ .time = .{ .token = t } },
+                    .kd_idx = ev.kd_idx,
+                    .blocked = ev.blocked,
+                }) catch unreachable;
+                break;
             }
-
-            defer t +%= 1;
-            return t;
         } else {
-            return self.impl.scheduleCall(time - cur_time);
+            self.callScheduled(t);
         }
+
+        defer t +%= 1;
+        return t;
     }
 
     fn getTimeMillis(self: Self) TimeMillis {
