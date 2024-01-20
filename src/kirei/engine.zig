@@ -28,25 +28,23 @@ pub const TimeEvent = packed struct {
 pub const Interface = struct {
     handleKeycode: *const fn (keycode: u16, down: bool) void,
     scheduleTimeEvent: *const fn (duration: TimeMillis) ScheduleToken,
+    toggleLed: *const fn () void,
 };
 
 pub const Event = struct {
-    id: Id,
     data: Data,
     time: TimeMillis = 0,
     handled: bool = false,
-
-    pub const Id = u32; // TODO: Can we make this smaller? How do we handle overflow?
+    kd_idx: usize = 0,
+    blocked: bool = false,
 
     pub const Data = union(enum) {
         key: KeyEvent,
         time: TimeEvent,
     };
 
-    fn init(data: Data, event_id_counter: *Event.Id, time: TimeMillis) Event {
-        event_id_counter.* +%= 1;
+    fn init(data: Data, time: TimeMillis) Event {
         return Event{
-            .id = event_id_counter.*,
             .data = data,
             .time = time,
         };
@@ -69,9 +67,10 @@ pub const ProcessResult = union(enum) {
 };
 
 pub const Implementation = struct {
-    onReportPush: *const fn (report: *const [8]u8) bool,
+    onReportPush: *const fn (report: *const output.HidReport) bool,
     getTimeMillis: *const fn () TimeMillis,
     scheduleCall: *const fn (duration: TimeMillis) ScheduleToken,
+    toggleLed: *const fn () void,
 };
 
 pub fn Engine(comptime impl: Implementation) type {
@@ -80,7 +79,6 @@ pub fn Engine(comptime impl: Implementation) type {
         key_defs: List(KeyDef, 32) = List(KeyDef, 32).init(),
         events: List(Event, 32) = List(Event, 32).init(),
         ev_idx: usize = 0,
-        event_id_counter: Event.Id = 0,
 
         const Self = @This();
 
@@ -90,6 +88,7 @@ pub fn Engine(comptime impl: Implementation) type {
         const interface = Interface{
             .handleKeycode = handleKeycode,
             .scheduleTimeEvent = scheduleTimeEvent,
+            .toggleLed = impl.toggleLed,
         };
 
         pub fn process(self: *Self) void {
@@ -97,19 +96,22 @@ pub fn Engine(comptime impl: Implementation) type {
             output.sendReports(impl);
         }
 
+        fn pushEvent(self: *Self, data: Event.Data) void {
+            self.events.pushBack(Event.init(data, getTimeMillis())) catch unreachable;
+        }
+
         fn processEvents(self: *Self) !void {
             blk_ev: while (self.ev_idx < self.events.size) {
                 const ev = self.events.at(self.ev_idx);
-                var kd_idx: usize = 0;
+
+                if (ev.blocked) {
+                    unreachable;
+                }
+
+                var kd_idx: usize = ev.kd_idx;
 
                 while (kd_idx < self.key_defs.size) {
                     const key_def = self.key_defs.at(kd_idx);
-
-                    if (ev.id <= key_def.last_processed_event_id) {
-                        kd_idx += 1;
-                        continue;
-                    }
-
                     const result = key_def.process(&interface, ev);
                     const is_ev_handled = ev.isHandled();
 
@@ -122,10 +124,46 @@ pub fn Engine(comptime impl: Implementation) type {
                         .block => {},
                         .transform => |next| {
                             key_def.* = next;
-                            self.ev_idx = 0;
+
+                            var first_ev_idx: ?usize = null;
+
+                            for (self.events.array[0..self.events.size], 0..) |*event, i| {
+                                if (event.kd_idx == kd_idx and event.blocked) {
+                                    event.blocked = false;
+
+                                    if (first_ev_idx == null)
+                                        first_ev_idx = i;
+                                }
+                            }
+
+                            if (first_ev_idx) |i| {
+                                self.ev_idx = i;
+                                continue :blk_ev;
+                            }
                         },
                         .complete => {
+                            var first_ev_idx: ?usize = null;
+
+                            for (self.events.array[0..self.events.size], 0..) |*event, i| {
+                                if (event.kd_idx == kd_idx and event.blocked) {
+                                    event.blocked = false;
+
+                                    if (first_ev_idx == null)
+                                        first_ev_idx = i;
+                                }
+                            }
+
+                            for (self.events.array[0..self.events.size]) |*event| {
+                                if (event.kd_idx > kd_idx)
+                                    event.kd_idx -= 1;
+                            }
+
                             _ = self.key_defs.remove(kd_idx);
+
+                            if (first_ev_idx) |i| {
+                                self.ev_idx = i;
+                                continue :blk_ev;
+                            }
                         },
                     }
 
@@ -134,8 +172,30 @@ pub fn Engine(comptime impl: Implementation) type {
                     }
 
                     switch (result) {
-                        .pass => kd_idx += 1,
+                        .pass => {
+                            var first_ev_idx: ?usize = null;
+
+                            for (self.events.array[0..self.events.size], 0..) |*event, i| {
+                                if (event.kd_idx == kd_idx and event.blocked) {
+                                    if (first_ev_idx == null)
+                                        first_ev_idx = i;
+
+                                    event.kd_idx += 1;
+                                    event.blocked = false;
+                                }
+                            }
+
+                            if (first_ev_idx) |i| {
+                                ev.kd_idx = kd_idx + 1;
+                                self.ev_idx = i;
+                                continue :blk_ev;
+                            } else {
+                                kd_idx += 1;
+                            }
+                        },
                         .block => {
+                            ev.kd_idx = kd_idx;
+                            ev.blocked = true;
                             self.ev_idx += 1;
                             continue :blk_ev;
                         },
@@ -171,28 +231,19 @@ pub fn Engine(comptime impl: Implementation) type {
         }
 
         pub fn callScheduled(self: *Self, token: u8) void {
-            const time_ev = Event.init(
-                .{ .time = .{ .token = token } },
-                &self.event_id_counter,
-                getTimeMillis(),
-            );
-            self.events.pushBack(time_ev) catch unreachable;
+            self.pushEvent(.{ .time = .{
+                .token = token,
+            } });
         }
 
         // Caller must guarantee that all key events are "toggles"
         // That is, caller must not report the same values of `down` consecutively (e.g. true->true, false->false)
         // That would be undefined behavior
         pub fn pushKeyEvent(self: *Self, key_idx: KeyIndex, down: bool) void {
-            self.events.pushBack(Event.init(
-                .{
-                    .key = .{
-                        .key_idx = key_idx,
-                        .down = down,
-                    },
-                },
-                &self.event_id_counter,
-                getTimeMillis(),
-            )) catch unreachable;
+            self.pushEvent(.{ .key = .{
+                .key_idx = key_idx,
+                .down = down,
+            } });
         }
     };
 }

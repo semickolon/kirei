@@ -6,7 +6,7 @@ const REPORT_QUEUE_CAPACITY = config.report_queue_size;
 
 const Queue = @import("data_structs.zig").Queue;
 
-const HidReport = [8]u8;
+pub const HidReport = [8]u8;
 const HidReportMods = std.bit_set.IntegerBitSet(8);
 const HidReportCodes = [6]u8;
 

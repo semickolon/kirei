@@ -9,6 +9,7 @@ var engine = kirei.Engine(.{
     .onReportPush = ble_dev.onReportPush,
     .getTimeMillis = getTimeMillis,
     .scheduleCall = scheduler.scheduleCall,
+    .toggleLed = toggleLed,
 }){};
 
 pub fn process() void {
@@ -25,4 +26,8 @@ pub fn pushKeyEvent(key_idx: kirei.KeyIndex, down: bool) void {
 
 fn getTimeMillis() kirei.TimeMillis {
     return @intCast((rtc.getTime() / 32000) % std.math.maxInt(u16));
+}
+
+fn toggleLed() void {
+    @import("config.zig").sys.led_1.toggle();
 }

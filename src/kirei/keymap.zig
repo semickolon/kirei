@@ -23,7 +23,6 @@ pub const Keymap = struct {
 pub const KeyDef = struct {
     key_idx: KeyIndex,
     behavior: Behavior,
-    last_processed_event_id: engine.Event.Id = 0,
 
     pub const Behavior = union(enum) {
         key_press: KeyPressBehavior,
@@ -45,8 +44,8 @@ pub const KeyDef = struct {
         };
     }
 
+    // TODO: `eif` can probably be comptime-known
     pub fn process(self: *Self, eif: *const engine.Interface, ev: *engine.Event) engine.ProcessResult {
-        self.last_processed_event_id = ev.id;
         return switch (self.behavior) {
             inline else => |*behavior| behavior.process(self.key_idx, eif, ev),
         };
