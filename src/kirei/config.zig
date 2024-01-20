@@ -11,5 +11,4 @@ pub const key_map = [_]u8{
     3, 0, 0xE1, 0,
 };
 
-pub const key_event_queue_size: usize = 32;
 pub const report_queue_size: usize = 16;

@@ -9,9 +9,6 @@ const output = @import("output_hid.zig");
 const keymap = @import("keymap.zig");
 const KeyDef = keymap.KeyDef;
 
-const KEY_EVENT_QUEUE_CAPACITY = config.key_event_queue_size;
-const KEY_COUNT = config.key_map.len;
-
 pub const KeyIndex = u15;
 pub const TimeMillis = u16;
 pub const ScheduleToken = u8;
@@ -35,7 +32,7 @@ pub const Event = struct {
     data: Data,
     time: TimeMillis = 0,
     handled: bool = false,
-    kd_idx: usize = 0,
+    kd_idx: u6 = 0,
     blocked: bool = false,
 
     pub const Data = union(enum) {
@@ -75,12 +72,13 @@ pub const Implementation = struct {
 
 pub fn Engine(comptime impl: Implementation) type {
     return struct {
-        key_event_queue: Queue(KeyEvent, KEY_EVENT_QUEUE_CAPACITY) = Queue(KeyEvent, KEY_EVENT_QUEUE_CAPACITY).init(),
-        key_defs: List(KeyDef, 32) = List(KeyDef, 32).init(),
-        events: List(Event, 32) = List(Event, 32).init(),
-        ev_idx: usize = 0,
+        key_defs: KeyDefList = KeyDefList.init(),
+        events: EventList = EventList.init(),
+        ev_idx: u8 = 0,
 
         const Self = @This();
+        const KeyDefList = List(KeyDef, 64);
+        const EventList = List(Event, 256);
 
         const key_map = config.key_map;
         const callbacks = config.callbacks;
@@ -100,6 +98,27 @@ pub fn Engine(comptime impl: Implementation) type {
             self.events.pushBack(Event.init(data, getTimeMillis())) catch unreachable;
         }
 
+        fn unblockEvents(self: *Self, kd_idx: u6, pass_to_next_kd: bool) ?u8 {
+            var first_blocked_ev_idx: ?u8 = null;
+
+            for (self.events.array[0..self.events.size], 0..) |*event, i| {
+                if (event.kd_idx == kd_idx and event.blocked) {
+                    event.blocked = false;
+
+                    if (pass_to_next_kd)
+                        event.kd_idx += 1;
+
+                    if (first_blocked_ev_idx == null)
+                        first_blocked_ev_idx = @truncate(i);
+                } else if (first_blocked_ev_idx != null) {
+                    // Blocked events are contiguous so if there's no more matching blocked events, that's all of it
+                    break;
+                }
+            }
+
+            return first_blocked_ev_idx;
+        }
+
         fn processEvents(self: *Self) !void {
             blk_ev: while (self.ev_idx < self.events.size) {
                 const ev = self.events.at(self.ev_idx);
@@ -108,7 +127,7 @@ pub fn Engine(comptime impl: Implementation) type {
                     unreachable;
                 }
 
-                var kd_idx: usize = ev.kd_idx;
+                var kd_idx = ev.kd_idx;
 
                 while (kd_idx < self.key_defs.size) {
                     const key_def = self.key_defs.at(kd_idx);
@@ -125,33 +144,13 @@ pub fn Engine(comptime impl: Implementation) type {
                         .transform => |next| {
                             key_def.* = next;
 
-                            var first_ev_idx: ?usize = null;
-
-                            for (self.events.array[0..self.events.size], 0..) |*event, i| {
-                                if (event.kd_idx == kd_idx and event.blocked) {
-                                    event.blocked = false;
-
-                                    if (first_ev_idx == null)
-                                        first_ev_idx = i;
-                                }
-                            }
-
-                            if (first_ev_idx) |i| {
+                            if (self.unblockEvents(kd_idx, false)) |i| {
                                 self.ev_idx = i;
                                 continue :blk_ev;
                             }
                         },
                         .complete => {
-                            var first_ev_idx: ?usize = null;
-
-                            for (self.events.array[0..self.events.size], 0..) |*event, i| {
-                                if (event.kd_idx == kd_idx and event.blocked) {
-                                    event.blocked = false;
-
-                                    if (first_ev_idx == null)
-                                        first_ev_idx = i;
-                                }
-                            }
+                            const first_blocked_ev_idx = self.unblockEvents(kd_idx, false);
 
                             for (self.events.array[0..self.events.size]) |*event| {
                                 if (event.kd_idx > kd_idx)
@@ -160,7 +159,7 @@ pub fn Engine(comptime impl: Implementation) type {
 
                             _ = self.key_defs.remove(kd_idx);
 
-                            if (first_ev_idx) |i| {
+                            if (first_blocked_ev_idx) |i| {
                                 self.ev_idx = i;
                                 continue :blk_ev;
                             }
@@ -173,19 +172,7 @@ pub fn Engine(comptime impl: Implementation) type {
 
                     switch (result) {
                         .pass => {
-                            var first_ev_idx: ?usize = null;
-
-                            for (self.events.array[0..self.events.size], 0..) |*event, i| {
-                                if (event.kd_idx == kd_idx and event.blocked) {
-                                    if (first_ev_idx == null)
-                                        first_ev_idx = i;
-
-                                    event.kd_idx += 1;
-                                    event.blocked = false;
-                                }
-                            }
-
-                            if (first_ev_idx) |i| {
+                            if (self.unblockEvents(kd_idx, true)) |i| {
                                 ev.kd_idx = kd_idx + 1;
                                 self.ev_idx = i;
                                 continue :blk_ev;
