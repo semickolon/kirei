@@ -1,5 +1,4 @@
 const std = @import("std");
-const config = @import("config.zig");
 const engine = @import("engine.zig");
 
 const Queue = @import("data_structs.zig").Queue;

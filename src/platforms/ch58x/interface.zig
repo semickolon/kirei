@@ -14,6 +14,10 @@ var engine = kirei.Engine.init(.{
     .readKeymapBytes = readKeymapBytes,
 });
 
+pub fn init() void {
+    engine.setup() catch toggleLed();
+}
+
 pub fn process() void {
     engine.process();
 }

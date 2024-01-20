@@ -3,10 +3,9 @@ const std = @import("std");
 const Queue = @import("data_structs.zig").Queue;
 const List = @import("data_structs.zig").List;
 
-const config = @import("config.zig");
 const output = @import("output_hid.zig");
-
 const keymap = @import("keymap.zig");
+
 const Keymap = keymap.Keymap;
 const KeyDef = keymap.KeyDef;
 
@@ -80,14 +79,15 @@ pub const Engine = struct {
     const KeyDefList = List(KeyDef, 64);
     const EventList = List(Event, 256);
 
-    const key_map = config.key_map;
-    const callbacks = config.callbacks;
-
     pub fn init(comptime impl: Implementation) Self {
         return Self{
             .impl = impl,
             .keymap = Keymap.init(impl),
         };
+    }
+
+    pub fn setup(self: *Self) !void {
+        try self.keymap.setup();
     }
 
     pub fn process(self: *Self) void {
@@ -195,7 +195,7 @@ pub const Engine = struct {
             // At this point, event is NOT handled. Try salvaging it. Otherwise, sayonara.
             switch (ev.data) {
                 .key => |key_ev| if (key_ev.down) {
-                    const key_def = self.keymap.parseKeydef(key_ev.key_idx);
+                    const key_def = self.keymap.parseKeyDef(key_ev.key_idx);
                     try self.key_defs.pushBack(key_def);
                     continue :blk_ev;
                 },

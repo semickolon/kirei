@@ -25,6 +25,7 @@ inline fn main() noreturn {
 
     ble_dev.init();
     kscan.init();
+    interface.init();
 
     while (true) {
         kscan.process();
