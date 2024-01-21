@@ -25,7 +25,7 @@ pub fn build(b: *std.Build) void {
         "src/platforms/ch58x/main.zig";
 
     const exe = b.addExecutable(.{
-        .name = if (use_testing) "kirei" else "fak-kiwi",
+        .name = if (use_testing) "kirei" else "kirei-ch58x",
         .root_source_file = .{ .path = root_path },
         .target = target,
         .optimize = optimize,
