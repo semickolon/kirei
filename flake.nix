@@ -26,11 +26,23 @@
                 hash = "sha256-Ju2DBv3R4O48o8Fk/AFXOBIsvGMK9hJ8Ogxk47f7gcU=";
               };
             };
+            wlink = naersk.buildPackage rec {
+              pname = "wlink";
+              version = "nightly";
+              src = pkgs.fetchFromGitHub {
+                owner = "ch32-rs";
+                repo = pname;
+                rev = "1cadff15dae708964e177ccf5d9f34db98707bdb";
+                hash = "sha256-I3lEQ6bHB9EtqXzipja5GMigE5jYUTFoAYOMSVm7Cxo=";
+              };
+              nativeBuildInputs = with pkgs; [ pkg-config udev libusb1 ];
+            };
           in
           with pkgs; [
             zig
             zls
             wchisp
+            wlink
           ];
       };
     };
