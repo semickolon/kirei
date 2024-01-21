@@ -3,19 +3,25 @@ const gpio = @import("hal/gpio.zig");
 const P = gpio.pins;
 const TxPower = @import("ble/ble.zig").TxPower;
 
-pub const key_map = [_]u8{
-    0x69, 0xFA, 1,    0,
-    9,    0,    0,    0,
-    3,    2,    0,    0,
-    3,    0,    0x1A, 0,
-    3,    1,    0,    0,
-    3,    0,    0x15, 0,
-    3,    0,    0x17, 0,
-    3,    0,    0x1C, 0,
-    3,    0,    0x18, 0,
-    3,    0,    0x0C, 0,
-    3,    0,    0xE1, 0,
-};
+// pub const key_map = [_]u8{
+//     // Header
+//     0x69, 0xFA, 1,    0,
+//     9,    0,    0,    0,
+//     // Key codes
+//     // 3,    0,    69,   0,
+//     // 0,    0,    0,    0,
+//     // Key defs
+//     3,    2,    0xFA, 0x50,
+//     3,    0,    0x1A, 0,
+//     7,    1,    0xE0, 0,
+//     0x08, 0,    0xD0, 0x07,
+//     3,    0,    0x15, 0,
+//     3,    0,    0x17, 0,
+//     3,    0,    0x1C, 0,
+//     3,    0,    0x18, 0,
+//     3,    0,    0x0C, 0,
+//     3,    0,    0xE1, 0,
+// };
 
 pub const kscan = .{
     .matrix = .{

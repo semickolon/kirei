@@ -44,9 +44,9 @@ inline fn main() noreturn {
     debug.print("init success!\r\n");
 
     while (true) {
-        // kscan.process();
-        // interface.process();
-        // ble.process();
+        kscan.process();
+        interface.process();
+        ble.process();
     }
 }
 

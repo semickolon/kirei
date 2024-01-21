@@ -5,19 +5,26 @@ const ble_dev = @import("ble/ble_dev.zig");
 const rtc = @import("hal/rtc.zig");
 const scheduler = @import("ble/scheduler.zig");
 const debug = @import("debug.zig");
+const eeprom = @import("hal/eeprom.zig");
+
+var keymapBytes: [256]u8 = undefined;
 
 var engine = kirei.Engine.init(.{
     .onReportPush = ble_dev.onReportPush,
     .getTimeMillis = getTimeMillis,
     .scheduleCall = scheduler.scheduleCall,
     .cancelCall = scheduler.cancelCall,
-    .toggleLed = toggleLed,
     .readKeymapBytes = readKeymapBytes,
     .print = debug.print,
 });
 
 pub fn init() void {
-    engine.setup() catch toggleLed();
+    eeprom.read(0, &keymapBytes) catch {
+        debug.print("luh siya!!\r\n");
+    };
+    engine.setup() catch {
+        debug.print("engine setup failed\r\n");
+    };
 }
 
 pub fn process() void {
@@ -36,10 +43,6 @@ fn getTimeMillis() kirei.TimeMillis {
     return @intCast((rtc.getTime() / 32) % std.math.maxInt(u16));
 }
 
-fn toggleLed() void {
-    @import("config.zig").sys.led_1.toggle();
-}
-
 fn readKeymapBytes(offset: usize, len: usize) []const u8 {
-    return @import("config.zig").key_map[offset .. offset + len];
+    return keymapBytes[offset .. offset + len];
 }

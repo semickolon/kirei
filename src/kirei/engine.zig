@@ -63,7 +63,6 @@ pub const Implementation = struct {
     getTimeMillis: *const fn () TimeMillis,
     scheduleCall: *const fn (duration: TimeMillis, token: ScheduleToken) void,
     cancelCall: *const fn (token: ScheduleToken) void,
-    toggleLed: *const fn () void,
     readKeymapBytes: *const fn (offset: usize, len: usize) []const u8,
     print: *const fn (str: []const u8) void,
 };

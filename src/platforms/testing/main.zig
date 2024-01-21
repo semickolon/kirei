@@ -8,7 +8,6 @@ var engine = kirei.Engine.init(.{
     .getTimeMillis = getTimeMillis,
     .scheduleCall = scheduleCall,
     .cancelCall = cancelCall,
-    .toggleLed = toggleLed,
     .readKeymapBytes = readKeymapBytes,
     .print = print,
 });
@@ -44,10 +43,6 @@ fn scheduleCall(duration: kirei.TimeMillis, token: kirei.ScheduleToken) void {
 
 fn cancelCall(token: kirei.ScheduleToken) void {
     _ = token;
-}
-
-fn toggleLed() void {
-    std.debug.print("LED toggle\n", .{});
 }
 
 fn readKeymapBytes(offset: usize, len: usize) []const u8 {

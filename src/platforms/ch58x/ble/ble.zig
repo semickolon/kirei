@@ -3,13 +3,14 @@ const c = @import("../lib.zig");
 const config = @import("../config.zig");
 const UUID = @import("uuid.zig").UUID;
 const tmos = @import("tmos.zig");
+const debug = @import("../debug.zig");
 
 const systick = @import("../hal/systick.zig");
 const rtc = @import("../hal/rtc.zig");
 const pmu = @import("../hal/pmu.zig");
 const interrupts = @import("../hal/interrupts.zig");
+const eeprom = @import("../hal/eeprom.zig");
 
-const isp = @cImport(@cInclude("ISP583.h"));
 const n = @import("assigned_numbers.zig");
 
 var memBuf: [config.ble.mem_heap_size / 4]u32 align(4) = undefined;
@@ -114,18 +115,15 @@ fn initBleModule() !void {
     };
 }
 
-fn cu32(num: u32) c_long {
-    return @intCast(num);
-}
-
 fn libReadFlash(addr: u32, num: u32, pBuf: [*c]u32) callconv(.C) u32 {
-    _ = isp.EEPROM_READ(cu32(addr), pBuf, cu32(num * 4));
+    var buf: [*c]u8 = @ptrCast(pBuf);
+    eeprom.read(@intCast(addr), buf[0 .. num * 4]) catch return 1;
     return 0;
 }
 
 fn libWriteFlash(addr: u32, num: u32, pBuf: [*c]u32) callconv(.C) u32 {
-    _ = isp.EEPROM_ERASE(cu32(addr), cu32(num * 4));
-    _ = isp.EEPROM_WRITE(cu32(addr), pBuf, cu32(num * 4));
+    const buf: [*c]u8 = @ptrCast(pBuf);
+    eeprom.write(@intCast(addr), buf[0 .. num * 4]) catch return 1;
     return 0;
 }
 
@@ -177,7 +175,7 @@ fn enterSleep(time: u32) callconv(.C) u32 {
     // TODO: Something about HSE current for stability? Not sure.
     // HSECFG_Current(HSE_RCur_100);
 
-    // config.sys.led_1.toggle();
+    // debug.print("awaky! ");
     return 0;
 }
 

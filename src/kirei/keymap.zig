@@ -16,7 +16,7 @@ pub const Keymap = struct {
     key_count: KeyIndex = 0,
     offset_key_defs: usize = 0,
 
-    const Header = packed struct(u64) {
+    pub const Header = packed struct(u64) {
         magic: u16,
         version: u16,
         key_count: u16,
@@ -77,10 +77,10 @@ pub const KeyDef = struct {
     behavior: Behavior,
 
     pub const Behavior = union(enum) {
-        empty: EmptyBehavior,
         key_press: KeyPressBehavior,
         hold_tap: HoldTapBehavior,
         tap_dance: TapDanceBehavior,
+        empty: EmptyBehavior,
     };
 
     pub fn empty() KeyDef {
@@ -88,14 +88,24 @@ pub const KeyDef = struct {
     }
 
     pub fn parse(key_idx: KeyIndex, bytes: []const u8) KeyDef {
+        const fields = comptime switch (@typeInfo(Behavior)) {
+            .Union => |u| u.fields,
+            else => unreachable,
+        };
+
+        const behavior = inline for (fields, 0..) |field, i| {
+            if (bytes[0] == i and field.type != EmptyBehavior) {
+                const Config = field.type.Config;
+                const config = std.mem.bytesToValue(Config, bytes[1 .. 1 + @sizeOf(Config)]);
+                break @unionInit(Behavior, field.name, field.type.init(config));
+            }
+        } else {
+            return KeyDef.empty();
+        };
+
         return .{
             .key_idx = key_idx,
-            .behavior = switch (bytes[0]) {
-                0 => .{ .key_press = KeyPressBehavior.parse(bytes[1..]) },
-                1 => .{ .hold_tap = HoldTapBehavior.parse() },
-                2 => .{ .tap_dance = TapDanceBehavior.parse() },
-                else => unreachable,
-            },
+            .behavior = behavior,
         };
     }
 

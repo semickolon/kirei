@@ -9,15 +9,26 @@ const ScheduleToken = eng.ScheduleToken;
 
 const KeyDef = @import("../keymap.zig").KeyDef;
 
-hold_keycode: u16 = 0xE0,
-tap_keycode: u16 = 0x08,
-timeout_ms: u16 = 2000,
+pub const Config = packed struct {
+    hold_keycode: u16,
+    tap_keycode: u16,
+    timeout_ms: u16,
+};
+
+hold_keycode: u16,
+tap_keycode: u16,
+timeout_ms: u16,
+
 timeout_token: ?ScheduleToken = null,
 
 const Self = @This();
 
-pub fn parse() Self {
-    return .{};
+pub fn init(config: Config) Self {
+    return .{
+        .hold_keycode = config.hold_keycode,
+        .tap_keycode = config.tap_keycode,
+        .timeout_ms = config.timeout_ms,
+    };
 }
 
 pub fn process(self: *Self, key_idx: KeyIndex, engine: *Engine, ev: *Event) ProcessResult {
@@ -50,6 +61,8 @@ pub fn process(self: *Self, key_idx: KeyIndex, engine: *Engine, ev: *Event) Proc
 fn keyPressDef(key_idx: KeyIndex, keycode: u16) KeyDef {
     return .{
         .key_idx = key_idx,
-        .behavior = .{ .key_press = .{ .key_code = keycode } },
+        .behavior = .{
+            .key_press = .{ .key_code = keycode },
+        },
     };
 }

@@ -9,8 +9,13 @@ const ScheduleToken = eng.ScheduleToken;
 
 const KeyDef = @import("../keymap.zig").KeyDef;
 
-tapping_term_ms: u12 = 250,
-max_tap_count: u4 = 5,
+pub const Config = packed struct {
+    tapping_term_ms: u12,
+    max_tap_count: u4,
+};
+
+tapping_term_ms: u12,
+max_tap_count: u4,
 
 tap_counter: u8 = 0,
 resolved_tap_count: u8 = 0,
@@ -19,8 +24,11 @@ unwind: bool = false,
 
 const Self = @This();
 
-pub fn parse() Self {
-    return .{};
+pub fn init(config: Config) Self {
+    return .{
+        .tapping_term_ms = config.tapping_term_ms,
+        .max_tap_count = config.max_tap_count,
+    };
 }
 
 pub fn process(self: *Self, key_idx: KeyIndex, engine: *Engine, ev: *Event) ProcessResult {
@@ -84,6 +92,8 @@ fn tally(self: *Self, key_idx: KeyIndex, engine: *Engine, ev: *Event) bool {
 fn keyPressDef(key_idx: KeyIndex, keycode: u16) KeyDef {
     return .{
         .key_idx = key_idx,
-        .behavior = .{ .key_press = .{ .key_code = keycode } },
+        .behavior = .{
+            .key_press = .{ .key_code = keycode },
+        },
     };
 }

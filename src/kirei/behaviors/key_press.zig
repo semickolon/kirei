@@ -6,12 +6,16 @@ const Engine = eng.Engine;
 const Event = eng.Event;
 const ProcessResult = eng.ProcessResult;
 
+pub const Config = packed struct {
+    key_code: u16,
+};
+
 key_code: u16,
 
 const Self = @This();
 
-pub fn parse(bytes: []const u8) Self {
-    return .{ .key_code = std.mem.readInt(u16, bytes[0..2], .Little) };
+pub fn init(config: Config) Self {
+    return .{ .key_code = config.key_code };
 }
 
 pub fn process(self: *Self, key_idx: KeyIndex, engine: *Engine, ev: *Event) ProcessResult {
@@ -27,3 +31,11 @@ pub fn process(self: *Self, key_idx: KeyIndex, engine: *Engine, ev: *Event) Proc
     }
     return .pass;
 }
+
+// fn handle(self: Self, down: bool, engine: *Engine) void {
+//     for (0..self.config.key_codes_len) |i| {
+//         const idx = self.config.key_codes_idx_start + @as(u16, @intCast(i));
+//         const key_code = engine.keymap.keyCodeAt(idx);
+//         engine.handleKeycode(key_code, down);
+//     }
+// }
