@@ -19,8 +19,8 @@ pub const key_map = [_]u8{
 
 pub const kscan = .{
     .matrix = .{
-        .cols = [_]gpio.Pin{ P.B15, P.B14, P.B13 },
-        .rows = [_]gpio.Pin{ P.B10, P.B7, P.B4 },
+        .cols = [_]gpio.Pin{ P.B10, P.B7, P.B4 },
+        .rows = [_]gpio.Pin{ P.A15, P.A5, P.A4 },
     },
     .scan_interval = 2, // in 625us units
 };

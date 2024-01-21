@@ -4,6 +4,7 @@ const kirei = @import("kirei");
 const ble_dev = @import("ble/ble_dev.zig");
 const rtc = @import("hal/rtc.zig");
 const scheduler = @import("ble/scheduler.zig");
+const debug = @import("debug.zig");
 
 var engine = kirei.Engine.init(.{
     .onReportPush = ble_dev.onReportPush,
@@ -12,6 +13,7 @@ var engine = kirei.Engine.init(.{
     .cancelCall = scheduler.cancelCall,
     .toggleLed = toggleLed,
     .readKeymapBytes = readKeymapBytes,
+    .print = debug.print,
 });
 
 pub fn init() void {
