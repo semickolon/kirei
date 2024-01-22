@@ -40,7 +40,8 @@ pub fn pushKeyEvent(key_idx: kirei.KeyIndex, down: bool) void {
 }
 
 fn getTimeMillis() kirei.TimeMillis {
-    return @intCast((rtc.getTime() / 32) % std.math.maxInt(u16));
+    // TODO: Handle wrap over rtc.MAX_CYCLE_32K
+    return @intCast(rtc.getTimeMillis() % std.math.maxInt(u16));
 }
 
 fn readKeymapBytes(offset: usize, len: usize) []const u8 {

@@ -61,6 +61,10 @@ pub fn getTime() u32 {
     return time.*;
 }
 
+pub fn getTimeMillis() u32 {
+    return getTime() / 32;
+}
+
 pub fn setTimingMode(enabled: bool) void {
     common.safe_access.enable();
     mode_ctrl.timing_mode_enable = enabled;
