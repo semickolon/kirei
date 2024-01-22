@@ -19,6 +19,7 @@ const scan_interval = Duration.fromMicros(tmos.SYSTEM_TIME_US * config.kscan.sca
 
 var scanning = false;
 var debounce_counters = std.PackedIntArray(u2, key_count).initAllTo(0);
+var keys_pressed = std.StaticBitSet(key_count).initEmpty();
 
 pub fn init() void {
     task = tmos.register(blueprint);
@@ -100,7 +101,10 @@ pub fn scan() void {
                 std.math.maxInt(@TypeOf(debounce_counters).Child) => true,
                 else => null,
             }) |is_down| {
-                interface.pushKeyEvent(@truncate(key_idx), is_down);
+                if (keys_pressed.isSet(key_idx) != is_down) {
+                    keys_pressed.toggle(key_idx);
+                    interface.pushKeyEvent(@truncate(key_idx), is_down);
+                }
             }
         }
 
