@@ -1,7 +1,7 @@
 const std = @import("std");
 const c = @import("../lib.zig");
 const config = @import("../config.zig");
-const UUID = @import("uuid.zig").UUID;
+const UUID = @import("uuid").UUID;
 const tmos = @import("tmos.zig");
 const debug = @import("../debug.zig");
 
@@ -175,7 +175,7 @@ fn enterSleep(time: u32) callconv(.C) u32 {
     // TODO: Something about HSE current for stability? Not sure.
     // HSECFG_Current(HSE_RCur_100);
 
-    // debug.print("awaky! ");
+    config.sys.led_1.toggle();
     return 0;
 }
 
