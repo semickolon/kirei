@@ -1,19 +1,29 @@
 const std = @import("std");
 const engine = @import("engine.zig");
 
-const Queue = @import("data_structs.zig").Queue;
+const Self = @This();
 
 pub const HidReport = [8]u8;
+
 const HidReportMods = std.bit_set.IntegerBitSet(8);
 const HidReportCodes = [6]u8;
+const ReportQueue = std.TailQueue(HidReport);
 
-var report = std.mem.zeroes(HidReport);
-const report_mods: *HidReportMods = @ptrCast(&report[0]);
-const report_codes: *HidReportCodes = report[2..];
+report: HidReport = std.mem.zeroes(HidReport),
+report_queue: ReportQueue,
+impl: engine.Implementation,
 
-var report_queue = Queue(HidReport, 16).init();
+pub fn init(impl: engine.Implementation) Self {
+    return .{
+        .report_queue = .{},
+        .impl = impl,
+    };
+}
 
-pub fn pushHidEvent(code: u8, down: bool) !void {
+pub fn pushHidEvent(self: *Self, code: u8, down: bool) !void {
+    const report_mods: *HidReportMods = @ptrCast(&self.report[0]);
+    const report_codes: *HidReportCodes = self.report[2..];
+
     var dirty = false;
 
     if (code >= 0xE0 and code <= 0xE7) {
@@ -38,24 +48,35 @@ pub fn pushHidEvent(code: u8, down: bool) !void {
     }
 
     if (dirty) {
-        try report_queue.push(report);
+        const node = try self.impl.allocator.create(ReportQueue.Node);
+        node.data = self.report;
+        self.report_queue.prepend(node);
     }
 }
 
-pub fn sendReports(impl: engine.Implementation) void {
-    while (report_queue.peek()) |head| {
-        if (impl.onReportPush(head)) {
-            _ = report_queue.pop();
+pub fn sendReports(self: *Self) void {
+    while (self.peekReport()) |*head| {
+        if (self.impl.onReportPush(head)) {
+            _ = self.popReport();
         } else {
             break;
         }
     }
 }
 
-pub fn peekReport() ?*HidReport {
-    return report_queue.peek();
+pub fn peekReport(self: Self) ?HidReport {
+    if (self.report_queue.last) |last| {
+        return last.data;
+    } else {
+        return null;
+    }
 }
 
-pub fn popReport() ?HidReport {
-    return report_queue.pop();
+pub fn popReport(self: *Self) ?HidReport {
+    if (self.report_queue.pop()) |node| {
+        defer self.impl.allocator.destroy(node);
+        return node.data;
+    } else {
+        return null;
+    }
 }

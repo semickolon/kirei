@@ -1,11 +1,8 @@
 const std = @import("std");
 
-const Queue = @import("data_structs.zig").Queue;
-const List = @import("data_structs.zig").List;
+const OutputHid = @import("output_hid.zig");
 
-const output = @import("output_hid.zig");
 const keymap = @import("keymap.zig");
-
 const Keymap = keymap.Keymap;
 const KeyDef = keymap.KeyDef;
 
@@ -60,7 +57,7 @@ pub const ProcessResult = union(enum) {
 pub const Implementation = struct {
     allocator: std.mem.Allocator,
 
-    onReportPush: *const fn (report: *const output.HidReport) bool,
+    onReportPush: *const fn (report: *const OutputHid.HidReport) bool,
     getTimeMillis: *const fn () TimeMillis,
     scheduleCall: *const fn (duration: TimeMillis, token: ScheduleToken) void,
     cancelCall: *const fn (token: ScheduleToken) void,
@@ -70,6 +67,7 @@ pub const Implementation = struct {
 
 pub const Engine = struct {
     keymap: Keymap,
+    output_hid: OutputHid,
     key_defs: KeyDefList,
     events: EventList,
     ev_idx: u8 = 0,
@@ -85,6 +83,7 @@ pub const Engine = struct {
         return Self{
             .impl = impl,
             .keymap = Keymap.init(impl),
+            .output_hid = OutputHid.init(impl),
             .key_defs = KeyDefList.init(impl.allocator),
             .events = EventList.init(impl.allocator),
         };
@@ -96,7 +95,7 @@ pub const Engine = struct {
 
     pub fn process(self: *Self) void {
         self.processEvents() catch unreachable;
-        output.sendReports(self.impl);
+        self.output_hid.sendReports();
     }
 
     fn pushEvent(self: *Self, data: Event.Data) void {
@@ -210,9 +209,8 @@ pub const Engine = struct {
         }
     }
 
-    pub fn handleKeycode(self: Self, keycode: u16, down: bool) void {
-        _ = self;
-        output.pushHidEvent(@truncate(keycode), down) catch unreachable;
+    pub fn handleKeycode(self: *Self, keycode: u16, down: bool) void {
+        self.output_hid.pushHidEvent(@truncate(keycode), down) catch unreachable;
     }
 
     pub fn scheduleTimeEvent(self: *Self, time: TimeMillis) ?ScheduleToken {
