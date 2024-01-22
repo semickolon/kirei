@@ -11,8 +11,7 @@ const KeyDef = keymap.KeyDef;
 
 pub const KeyIndex = u15;
 pub const TimeMillis = u16;
-// TODO: Scheduler needs more work. 16 tokens might be prone to collision on greedy blocking behaviors.
-pub const ScheduleToken = u4;
+pub const ScheduleToken = u8;
 
 pub const KeyEvent = packed struct(u16) {
     key_idx: KeyIndex,

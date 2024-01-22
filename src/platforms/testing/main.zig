@@ -1,7 +1,11 @@
 const std = @import("std");
 const kirei = @import("kirei");
 
+const Scheduler = @import("scheduler.zig");
+
 const HidReport = [8]u8;
+
+var scheduler = Scheduler.init(callScheduled);
 
 var engine = kirei.Engine.init(.{
     .onReportPush = onReportPush,
@@ -15,7 +19,7 @@ var engine = kirei.Engine.init(.{
 pub const key_map = [_]u8{
     0x69, 0xFA, 1,    0,
     9,    0,    0,    0,
-    3,    0,    9,    0,
+    3,    2,    0xFA, 0x50,
     3,    0,    0x1A, 0,
     3,    0,    10,   0,
     3,    0,    0x15, 0,
@@ -32,17 +36,20 @@ fn onReportPush(report: *const HidReport) bool {
 }
 
 fn getTimeMillis() kirei.TimeMillis {
-    const m: kirei.TimeMillis = @truncate(@as(u64, @intCast(std.time.milliTimestamp())) % std.math.maxInt(kirei.TimeMillis));
-    // std.debug.print("getTimeMillis: {any}\n", .{m});
-    return m;
+    const t: u64 = Scheduler.getTimeMillis();
+    return @truncate(t % (std.math.maxInt(kirei.TimeMillis) + 1));
 }
 
 fn scheduleCall(duration: kirei.TimeMillis, token: kirei.ScheduleToken) void {
-    std.debug.print("{any}ms scheduled as token {any}\n", .{ duration, token });
+    scheduler.schedule(duration, token);
 }
 
 fn cancelCall(token: kirei.ScheduleToken) void {
-    _ = token;
+    scheduler.cancel(token);
+}
+
+fn callScheduled(token: kirei.ScheduleToken) void {
+    engine.callScheduled(token);
 }
 
 fn readKeymapBytes(offset: usize, len: usize) []const u8 {
@@ -53,26 +60,59 @@ fn print(str: []const u8) void {
     _ = std.io.getStdOut().write(str) catch unreachable;
 }
 
-fn msToNs(ms: u16) u64 {
-    return @as(u64, ms) * 1000 * 1000;
+pub const Step = union(enum) {
+    key: struct {
+        key_idx: kirei.KeyIndex,
+        down: bool,
+    },
+    wait: kirei.TimeMillis,
+
+    fn k(key_idx: kirei.KeyIndex, down: bool) Step {
+        return .{ .key = .{ .key_idx = key_idx, .down = down } };
+    }
+
+    fn w(duration: kirei.TimeMillis) Step {
+        return .{ .wait = duration };
+    }
+
+    fn do(self: Step) ?u64 {
+        switch (self) {
+            .key => |ks| engine.pushKeyEvent(ks.key_idx, ks.down),
+            .wait => |ms| return Scheduler.getTimeMillis() + ms,
+        }
+        return null;
+    }
+};
+
+const steps = [_]Step{
+    Step.k(0, true),
+    Step.w(175),
+    Step.k(0, false),
+    Step.w(100),
+    Step.k(0, true),
+    Step.k(0, false),
+    Step.w(200),
+    Step.k(0, true),
+    Step.w(300),
+};
+
+fn process() void {
+    scheduler.process();
+    engine.process();
 }
 
 pub fn main() !void {
-    // Check `.pass` operation
-    // engine.process();
-    // engine.pushKeyEvent(0, true);
-    // engine.pushKeyEvent(0, false);
-    // engine.pushKeyEvent(0, true);
-    // engine.callScheduled(1);
-    // engine.pushKeyEvent(0, false);
-    // engine.callScheduled(2);
-    // engine.process();
-
     engine.setup() catch unreachable;
 
-    engine.process();
-    engine.pushKeyEvent(1, true);
-    engine.pushKeyEvent(2, true);
-    engine.pushKeyEvent(8, true);
-    engine.process();
+    for (steps) |step| {
+        process();
+
+        if (step.do()) |wait_until| {
+            while (Scheduler.getTimeMillis() < wait_until) {
+                process();
+            }
+        }
+    }
+
+    process();
 }
