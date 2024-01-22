@@ -23,7 +23,7 @@ pub const Keymap = struct {
         id: u16,
     };
 
-    pub fn init(comptime impl: Implementation) Keymap {
+    pub fn init(impl: Implementation) Keymap {
         return .{ .impl = impl };
     }
 

@@ -5,9 +5,12 @@ const Scheduler = @import("scheduler.zig");
 
 const HidReport = [8]u8;
 
+var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+
 var scheduler = Scheduler.init(callScheduled);
 
 var engine = kirei.Engine.init(.{
+    .allocator = gpa.allocator(),
     .onReportPush = onReportPush,
     .getTimeMillis = getTimeMillis,
     .scheduleCall = scheduleCall,

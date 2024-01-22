@@ -58,6 +58,8 @@ pub const ProcessResult = union(enum) {
 };
 
 pub const Implementation = struct {
+    allocator: std.mem.Allocator,
+
     onReportPush: *const fn (report: *const output.HidReport) bool,
     getTimeMillis: *const fn () TimeMillis,
     scheduleCall: *const fn (duration: TimeMillis, token: ScheduleToken) void,
@@ -68,20 +70,23 @@ pub const Implementation = struct {
 
 pub const Engine = struct {
     keymap: Keymap,
-    key_defs: KeyDefList = KeyDefList.init(),
-    events: EventList = EventList.init(),
+    key_defs: KeyDefList,
+    events: EventList,
     ev_idx: u8 = 0,
     impl: Implementation,
     schedule_token_counter: ScheduleToken = 0,
 
     const Self = @This();
-    const KeyDefList = List(KeyDef, 64);
-    const EventList = List(Event, 256);
 
-    pub fn init(comptime impl: Implementation) Self {
+    const KeyDefList = std.ArrayList(KeyDef);
+    const EventList = std.ArrayList(Event);
+
+    pub fn init(impl: Implementation) Self {
         return Self{
             .impl = impl,
             .keymap = Keymap.init(impl),
+            .key_defs = KeyDefList.init(impl.allocator),
+            .events = EventList.init(impl.allocator),
         };
     }
 
@@ -95,13 +100,13 @@ pub const Engine = struct {
     }
 
     fn pushEvent(self: *Self, data: Event.Data) void {
-        self.events.pushBack(Event.init(data, self.getTimeMillis())) catch unreachable;
+        self.events.append(Event.init(data, self.getTimeMillis())) catch unreachable;
     }
 
     fn unblockEvents(self: *Self, kd_idx: u6, pass_to_next_kd: bool) ?u8 {
         var first_blocked_ev_idx: ?u8 = null;
 
-        for (self.events.asSlice(), 0..) |*event, i| {
+        for (self.events.items, 0..) |*event, i| {
             if (event.kd_idx == kd_idx and event.blocked) {
                 event.blocked = false;
 
@@ -120,8 +125,8 @@ pub const Engine = struct {
     }
 
     fn processEvents(self: *Self) !void {
-        blk_ev: while (self.ev_idx < self.events.size) {
-            const ev = self.events.at(self.ev_idx);
+        blk_ev: while (self.ev_idx < self.events.items.len) {
+            const ev = &self.events.items[self.ev_idx];
 
             if (ev.blocked) {
                 unreachable;
@@ -129,13 +134,13 @@ pub const Engine = struct {
 
             var kd_idx = ev.kd_idx;
 
-            while (kd_idx < self.key_defs.size) {
-                const key_def = self.key_defs.at(kd_idx);
+            while (kd_idx < self.key_defs.items.len) {
+                const key_def = &self.key_defs.items[kd_idx];
                 const result = key_def.process(self, ev);
                 const is_ev_handled = ev.isHandled();
 
                 if (is_ev_handled) {
-                    _ = self.events.remove(self.ev_idx);
+                    _ = self.events.orderedRemove(self.ev_idx);
                 }
 
                 switch (result) {
@@ -152,12 +157,12 @@ pub const Engine = struct {
                     .complete => {
                         const first_blocked_ev_idx = self.unblockEvents(kd_idx, false);
 
-                        for (self.events.asSlice()) |*event| {
+                        for (self.events.items) |*event| {
                             if (event.kd_idx > kd_idx)
                                 event.kd_idx -= 1;
                         }
 
-                        _ = self.key_defs.remove(kd_idx);
+                        _ = self.key_defs.orderedRemove(kd_idx);
 
                         if (first_blocked_ev_idx) |i| {
                             self.ev_idx = i;
@@ -195,13 +200,13 @@ pub const Engine = struct {
             switch (ev.data) {
                 .key => |key_ev| if (key_ev.down) {
                     const key_def = self.keymap.parseKeyDef(key_ev.key_idx);
-                    try self.key_defs.pushBack(key_def);
+                    try self.key_defs.append(key_def);
                     continue :blk_ev;
                 },
                 else => {},
             }
 
-            _ = self.events.remove(self.ev_idx);
+            _ = self.events.orderedRemove(self.ev_idx);
         }
     }
 
@@ -229,7 +234,7 @@ pub const Engine = struct {
     }
 
     fn insertRetroactiveTimeEvent(self: *Self, time: TimeMillis, token: ScheduleToken) void {
-        for (self.events.asSlice(), 0..) |ev, i| {
+        for (self.events.items, 0..) |ev, i| {
             if (ev.time >= time) {
                 self.events.insert(i, .{
                     .data = .{ .time = .{ .token = token } },

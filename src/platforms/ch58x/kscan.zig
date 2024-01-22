@@ -6,7 +6,7 @@ const tmos = @import("ble/tmos.zig");
 const common = @import("hal/common.zig");
 const Duration = @import("duration.zig").Duration;
 
-const key_count = 9; // TODO: Hardcoded
+const key_count = config.kscan.key_count;
 const matrix = config.kscan.matrix;
 
 const blueprint = tmos.TaskBlueprint{
@@ -18,8 +18,8 @@ var task: tmos.Task(blueprint.Event) = undefined;
 const scan_interval = Duration.fromMicros(tmos.SYSTEM_TIME_US * config.kscan.scan_interval);
 
 var scanning = false;
-var debounce_counters = std.PackedIntArray(u2, key_count).initAllTo(0);
 var keys_pressed = std.StaticBitSet(key_count).initEmpty();
+var debounce_counters = std.PackedIntArray(u2, key_count).initAllTo(0);
 
 pub fn init() void {
     task = tmos.register(blueprint);

@@ -6,22 +6,37 @@ const rtc = @import("hal/rtc.zig");
 const scheduler = @import("ble/scheduler.zig");
 const debug = @import("debug.zig");
 const eeprom = @import("hal/eeprom.zig");
+const config = @import("config.zig");
+
+const UmmAllocator = @import("umm").UmmAllocator(.{});
 
 var keymapBytes: [256]u8 = undefined;
 
-var engine = kirei.Engine.init(.{
-    .onReportPush = ble_dev.onReportPush,
-    .getTimeMillis = getTimeMillis,
-    .scheduleCall = scheduler.scheduleCall,
-    .cancelCall = scheduler.cancelCall,
-    .readKeymapBytes = readKeymapBytes,
-    .print = debug.print,
-});
+var engine: kirei.Engine = undefined;
+
+var umm: UmmAllocator = undefined;
+var umm_heap = std.mem.zeroes([config.engine.mem_heap_size]u8);
 
 pub fn init() void {
+    umm = UmmAllocator.init(&umm_heap) catch {
+        debug.print("umm alloc init failed");
+        return;
+    };
+
+    engine = kirei.Engine.init(.{
+        .allocator = umm.allocator(),
+        .onReportPush = ble_dev.onReportPush,
+        .getTimeMillis = getTimeMillis,
+        .scheduleCall = scheduler.scheduleCall,
+        .cancelCall = scheduler.cancelCall,
+        .readKeymapBytes = readKeymapBytes,
+        .print = debug.print,
+    });
+
     eeprom.read(0, &keymapBytes) catch {
         debug.print("luh siya!!\r\n");
     };
+
     engine.setup() catch {
         debug.print("engine setup failed\r\n");
     };

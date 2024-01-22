@@ -17,6 +17,7 @@ pub fn build(b: *std.Build) void {
 
     const modules = .{
         .kirei = b.createModule(.{ .source_file = .{ .path = "src/kirei/engine.zig" } }),
+        .umm = b.createModule(.{ .source_file = .{ .path = "src/lib/umm/umm.zig" } }),
     };
 
     const root_path = if (use_testing)
@@ -32,6 +33,7 @@ pub fn build(b: *std.Build) void {
     });
 
     exe.addModule("kirei", modules.kirei);
+    exe.addModule("umm", modules.umm);
 
     if (!use_testing) {
         const link_file_path = "src/platforms/ch58x/link.ld";
