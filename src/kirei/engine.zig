@@ -95,7 +95,7 @@ pub const Engine = struct {
 
     pub fn process(self: *Self) void {
         self.processEvents() catch unreachable;
-        self.output_hid.sendReports();
+        self.output_hid.sendReports() catch unreachable;
     }
 
     fn pushEvent(self: *Self, data: Event.Data) void {
