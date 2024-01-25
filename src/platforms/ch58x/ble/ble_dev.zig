@@ -104,7 +104,7 @@ fn tmosEvtStartParamUpdate() void {
         config.ble.conn_interval_min,
         config.ble.conn_interval_max,
         0,
-        500,
+        5000,
         tmos_task.id,
     );
 }

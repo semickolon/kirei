@@ -24,7 +24,7 @@ var ble_config: c.bleConfig_t = blk: {
     cfg.TxNumEvent = config.ble.tx_num_event;
     cfg.TxPower = @intFromEnum(config.ble.tx_power);
 
-    cfg.SNVAddr = 0x77E00 - 0x070000; // TODO: Why?
+    cfg.SNVAddr = 0x8000 - 512; // Last 512 bytes of EEPROM
     cfg.readFlashCB = libReadFlash;
     cfg.writeFlashCB = libWriteFlash;
 

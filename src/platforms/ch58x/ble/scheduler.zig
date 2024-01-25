@@ -49,6 +49,10 @@ pub fn cancelCall(token: kirei.ScheduleToken) void {
         if (token != t)
             continue;
 
+        if (i == 0 and tmos_task != null) {
+            tmos_task.?.cancelEvent(.call_0);
+        }
+
         _ = task_tokens.orderedRemove(i);
         _ = task_time_millis.orderedRemove(i);
         active_tokens.unset(token);
