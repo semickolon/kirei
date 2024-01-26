@@ -48,7 +48,7 @@ pub const Keymap = struct {
         self.key_count = @truncate(header.key_count);
         self.offset_key_defs = @sizeOf(Header);
 
-        self.impl.print("keymap: setup successful\r\n");
+        std.log.debug("keymap: setup successful", .{});
     }
 
     pub fn parseKeyDef(self: Keymap, key_idx: KeyIndex) KeyDef {

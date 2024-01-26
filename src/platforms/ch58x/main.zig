@@ -26,22 +26,20 @@ inline fn main() noreturn {
 
     debug.init();
 
-    var buf = [_]u8{0} ** 128;
+    std.log.info("Kirei 🌸", .{});
 
     ble.init() catch |e| {
-        _ = std.fmt.bufPrintZ(&buf, "ble.init failed! {any}\r\n", .{e}) catch unreachable;
-        debug.print(&buf);
+        std.log.err("ble.init failed! {any}", .{e});
     };
     ble.initPeripheralRole() catch |e| {
-        _ = std.fmt.bufPrintZ(&buf, "ble.perinit failed! {any}\r\n", .{e}) catch unreachable;
-        debug.print(&buf);
+        std.log.err("ble.perinit failed! {any}", .{e});
     };
 
     ble_dev.init();
     kscan.init();
     interface.init();
 
-    debug.print("init success!\r\n");
+    std.log.debug("init success!", .{});
 
     while (true) {
         kscan.process();
@@ -49,6 +47,31 @@ inline fn main() noreturn {
         ble.process();
     }
 }
+
+pub fn log(comptime level: std.log.Level, comptime scope: @TypeOf(.EnumLiteral), comptime format: []const u8, args: anytype) void {
+    _ = scope;
+    debug.print(switch (level) {
+        .debug => "[D] ",
+        .info => "[I] ",
+        .err => "[E] ",
+        .warn => "[W] ",
+    });
+
+    var buf: [256]u8 = undefined;
+    _ = std.fmt.bufPrintZ(&buf, format, args) catch return;
+
+    debug.print(&buf);
+    debug.print("\r\n");
+
+    for (0..1024) |_| {
+        asm volatile ("nop");
+    }
+}
+
+pub const std_options = struct {
+    pub const log_level = .debug;
+    pub const logFn = log;
+};
 
 export fn _zigstart() noreturn {
     main();

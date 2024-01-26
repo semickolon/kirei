@@ -19,7 +19,7 @@ var umm_heap = std.mem.zeroes([config.engine.mem_heap_size]u8);
 
 pub fn init() void {
     umm = UmmAllocator.init(&umm_heap) catch {
-        debug.print("umm alloc init failed");
+        std.log.err("umm alloc init failed", .{});
         return;
     };
 
@@ -30,7 +30,6 @@ pub fn init() void {
         .scheduleCall = scheduler.scheduleCall,
         .cancelCall = scheduler.cancelCall,
         .readKeymapBytes = readKeymapBytes,
-        .print = debug.print,
     });
 
     eeprom.read(0, &keymapBytes) catch {
@@ -38,7 +37,7 @@ pub fn init() void {
     };
 
     engine.setup() catch {
-        debug.print("engine setup failed\r\n");
+        std.log.err("engine setup failed", .{});
     };
 }
 

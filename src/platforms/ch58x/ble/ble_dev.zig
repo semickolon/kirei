@@ -128,11 +128,11 @@ fn onGapStateChange(new_state: c.gapRole_States_t, event: [*c]c.gapRoleEvent_t) 
         conn_secure = false;
 
         setAdvertising(false);
-        debug.print("ble_dev: GAP state connected\r\n");
+        std.log.debug("ble_dev: GAP state connected", .{});
 
         tmos_task.scheduleEvent(.start_param_update, Duration.fromSecs(2));
     } else if (gap_state == c.GAPROLE_CONNECTED and new_state != c.GAPROLE_CONNECTED) {
-        debug.print("ble_dev: GAP state disconnected\r\n");
+        std.log.debug("ble_dev: GAP state disconnected", .{});
 
         conn_secure = false;
         gap_conn_handle = c.GAP_CONNHANDLE_INIT;
@@ -150,13 +150,13 @@ fn onGapPairStateChange(conn_handle: u16, state: u8, status: u8) callconv(.C) vo
 
     if (state == c.GAPBOND_PAIRING_STATE_COMPLETE) {
         if (status == c.SUCCESS) {
-            debug.print("ble_dev: Pairing complete\r\n");
+            std.log.debug("ble_dev: Pairing complete", .{});
             conn_secure = true;
         }
         // pairing_status = status;
     } else if (state == c.GAPBOND_PAIRING_STATE_BONDED) {
         if (status == c.SUCCESS) {
-            debug.print("ble_dev: Pairing bonded\r\n");
+            std.log.debug("ble_dev: Pairing bonded", .{});
             conn_secure = true;
         }
     }

@@ -62,7 +62,6 @@ pub const Implementation = struct {
     scheduleCall: *const fn (duration: TimeMillis, token: ScheduleToken) void,
     cancelCall: *const fn (token: ScheduleToken) void,
     readKeymapBytes: *const fn (offset: usize, len: usize) []const u8,
-    print: *const fn (str: []const u8) void,
 };
 
 pub const Engine = struct {
