@@ -6,11 +6,12 @@ const rtc = @import("hal/rtc.zig");
 const scheduler = @import("ble/scheduler.zig");
 const debug = @import("debug.zig");
 const eeprom = @import("hal/eeprom.zig");
+const flash = @import("hal/flash.zig");
 const config = @import("config.zig");
 
 const UmmAllocator = @import("umm").UmmAllocator(.{});
 
-var keymapBytes: [256]u8 = undefined;
+const keymap align(4) = std.mem.zeroes([30 * 1024]u8);
 
 var engine: kirei.Engine = undefined;
 
@@ -32,13 +33,26 @@ pub fn init() void {
         .readKeymapBytes = readKeymapBytes,
     });
 
-    eeprom.read(0, &keymapBytes) catch {
-        debug.print("luh siya!!\r\n");
+    loadKeymapFromEeprom() catch {
+        std.log.err("load keymap failed", .{});
     };
 
     engine.setup() catch {
         std.log.err("engine setup failed", .{});
     };
+}
+
+fn loadKeymapFromEeprom() !void {
+    var block: [256]u8 align(4) = undefined;
+    var byte_offset: usize = 0;
+
+    while (byte_offset < keymap.len) : (byte_offset +|= block.len) {
+        const block_len = @min(keymap.len - byte_offset, block.len);
+        const block_slice = block[0..block_len];
+
+        try eeprom.read(@truncate(byte_offset), block_slice);
+        try flash.write(&keymap[byte_offset], block_slice);
+    }
 }
 
 pub fn process() void {
@@ -59,5 +73,5 @@ fn getTimeMillis() kirei.TimeMillis {
 }
 
 fn readKeymapBytes(offset: usize, len: usize) []const u8 {
-    return keymapBytes[offset .. offset + len];
+    return keymap[offset .. offset + len];
 }

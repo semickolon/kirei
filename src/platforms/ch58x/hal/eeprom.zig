@@ -1,4 +1,4 @@
-const isp = @cImport(@cInclude("ISP583.h"));
+const isp = @import("isp.zig");
 
 pub const Address = u15; // EEPROM is 32KB
 
