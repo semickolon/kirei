@@ -48,6 +48,11 @@ inline fn main() noreturn {
     }
 }
 
+pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
+    std.log.err("PANIC: {s}", .{message});
+    while (true) {}
+}
+
 pub fn log(comptime level: std.log.Level, comptime scope: @TypeOf(.EnumLiteral), comptime format: []const u8, args: anytype) void {
     _ = scope;
     debug.print(switch (level) {

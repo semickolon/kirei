@@ -13,7 +13,7 @@ pub fn build(b: *std.Build) void {
             .cpu_features_add = std.Target.riscv.featureSet(&.{ .c, .m, .a }),
         };
 
-    const optimize = if (use_testing) b.standardOptimizeOption(.{}) else std.builtin.OptimizeMode.ReleaseSmall;
+    const optimize = if (use_testing) b.standardOptimizeOption(.{}) else std.builtin.OptimizeMode.ReleaseFast;
 
     const modules = .{
         .kirei = b.createModule(.{ .source_file = .{ .path = "src/kirei/engine.zig" } }),
