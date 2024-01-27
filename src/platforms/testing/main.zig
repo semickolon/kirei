@@ -16,7 +16,6 @@ var engine = kirei.Engine.init(.{
     .scheduleCall = scheduleCall,
     .cancelCall = cancelCall,
     .readKeymapBytes = readKeymapBytes,
-    .print = print,
 });
 
 pub const key_map = [_]u8{
@@ -34,7 +33,7 @@ pub const key_map = [_]u8{
 };
 
 fn onReportPush(report: *const HidReport) bool {
-    std.debug.print("{any}\n", .{report.*});
+    std.log.debug("{any}", .{report.*});
     return true;
 }
 
