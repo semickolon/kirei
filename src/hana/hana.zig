@@ -257,7 +257,7 @@ fn isContainerType(comptime T: type) bool {
 test {
     const Keymap = struct {
         header: Header,
-        key_defs: R.Indices[1].Slice,
+        behaviors: R.Indices[1].Slice,
 
         const R = Hana(@This(), &[_]CollectionIndex{
             .{ .T = Keycode, .Index = u16 },
@@ -273,11 +273,12 @@ test {
         const Keycode = u16;
 
         const Behavior = union(enum) {
-            empty: void,
-            key_press: R.Indices[0].Slice,
+            key_press: struct {
+                key_codes: R.Indices[0].Slice,
+            },
             hold_tap: struct {
-                hold: R.Indices[1].Single,
-                tap: R.Indices[1].Single,
+                hold_behavior: R.Indices[1].Single,
+                tap_behavior: R.Indices[1].Single,
                 props: R.Indices[2].Single,
             },
             tap_dance: struct {

@@ -62,20 +62,17 @@ pub const Keymap = struct {
     }
 };
 
-pub const EmptyBehavior = @import("behaviors/empty.zig");
 pub const KeyPressBehavior = @import("behaviors/key_press.zig");
 pub const HoldTapBehavior = @import("behaviors/hold_tap.zig");
 pub const TapDanceBehavior = @import("behaviors/tap_dance.zig");
 
 pub const BehaviorConfig = union(enum) {
-    empty: EmptyBehavior.Config,
     key_press: KeyPressBehavior.Config,
     hold_tap: HoldTapBehavior.Config,
     tap_dance: TapDanceBehavior.Config,
 
     pub fn asBehavior(self: BehaviorConfig) Behavior {
         return switch (self) {
-            .empty => |cfg| .{ .empty = EmptyBehavior.init(cfg) },
             .key_press => |cfg| .{ .key_press = KeyPressBehavior.init(cfg) },
             .hold_tap => |cfg| .{ .hold_tap = HoldTapBehavior.init(cfg) },
             .tap_dance => |cfg| .{ .tap_dance = TapDanceBehavior.init(cfg) },
@@ -84,7 +81,6 @@ pub const BehaviorConfig = union(enum) {
 };
 
 pub const Behavior = union(enum) {
-    empty: EmptyBehavior,
     key_press: KeyPressBehavior,
     hold_tap: HoldTapBehavior,
     tap_dance: TapDanceBehavior,
@@ -93,10 +89,6 @@ pub const Behavior = union(enum) {
 pub const KeyDef = struct {
     key_idx: KeyIndex,
     behavior: Behavior,
-
-    pub fn empty() KeyDef {
-        return .{ .key_idx = 0, .behavior = EmptyBehavior.init(.{}) };
-    }
 
     pub fn parse(key_idx: KeyIndex, h: *Keymap.Hana) KeyDef {
         const behavior_cfg = h.value.behaviors.at(h, key_idx);
