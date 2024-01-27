@@ -13,13 +13,17 @@ pub fn build(b: *std.Build) void {
             .cpu_features_add = std.Target.riscv.featureSet(&.{ .c, .m, .a }),
         };
 
-    const optimize = if (use_testing) b.standardOptimizeOption(.{}) else std.builtin.OptimizeMode.ReleaseFast;
+    const optimize = if (use_testing) b.standardOptimizeOption(.{}) else std.builtin.OptimizeMode.ReleaseSafe;
 
-    const modules = .{
-        .kirei = b.createModule(.{ .source_file = .{ .path = "src/kirei/engine.zig" } }),
-        .umm = b.createModule(.{ .source_file = .{ .path = "src/lib/umm/umm.zig" } }),
-        .uuid = b.createModule(.{ .source_file = .{ .path = "src/lib/uuid/uuid.zig" } }),
-    };
+    const hana = b.createModule(.{ .source_file = .{ .path = "src/hana/hana.zig" } });
+    const kirei = b.createModule(.{
+        .source_file = .{ .path = "src/kirei/engine.zig" },
+        .dependencies = &.{
+            .{ .name = "hana", .module = hana },
+        },
+    });
+    const umm = b.createModule(.{ .source_file = .{ .path = "src/lib/umm/umm.zig" } });
+    const uuid = b.createModule(.{ .source_file = .{ .path = "src/lib/uuid/uuid.zig" } });
 
     const root_path = if (use_testing)
         "src/platforms/testing/main.zig"
@@ -33,9 +37,9 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    exe.addModule("kirei", modules.kirei);
-    exe.addModule("umm", modules.umm);
-    exe.addModule("uuid", modules.uuid);
+    exe.addModule("kirei", kirei);
+    exe.addModule("umm", umm);
+    exe.addModule("uuid", uuid);
 
     if (!use_testing) {
         const link_file_path = "src/platforms/ch58x/link.ld";

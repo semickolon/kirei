@@ -61,7 +61,6 @@ pub const Implementation = struct {
     getTimeMillis: *const fn () TimeMillis,
     scheduleCall: *const fn (duration: TimeMillis, token: ScheduleToken) void,
     cancelCall: *const fn (token: ScheduleToken) void,
-    readKeymapBytes: *const fn (offset: usize, len: usize) []const u8,
 };
 
 pub const Engine = struct {
@@ -78,18 +77,14 @@ pub const Engine = struct {
     const KeyDefList = std.ArrayList(KeyDef);
     const EventList = std.ArrayList(Event);
 
-    pub fn init(impl: Implementation) Self {
+    pub fn init(impl: Implementation, keymap_bytes: []align(4) const u8) !Self {
         return Self{
             .impl = impl,
-            .keymap = Keymap.init(impl),
+            .keymap = try Keymap.init(impl, keymap_bytes),
             .output_hid = OutputHid.init(impl),
             .key_defs = KeyDefList.init(impl.allocator),
             .events = EventList.init(impl.allocator),
         };
-    }
-
-    pub fn setup(self: *Self) !void {
-        try self.keymap.setup();
     }
 
     pub fn process(self: *Self) void {

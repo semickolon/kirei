@@ -11,7 +11,7 @@ const config = @import("config.zig");
 
 const UmmAllocator = @import("umm").UmmAllocator(.{});
 
-const keymap align(4) = std.mem.zeroes([30 * 1024]u8);
+var keymap align(4) = std.mem.zeroes([2 * 1024]u8);
 
 var engine: kirei.Engine = undefined;
 
@@ -24,21 +24,22 @@ pub fn init() void {
         return;
     };
 
-    engine = kirei.Engine.init(.{
-        .allocator = umm.allocator(),
-        .onReportPush = ble_dev.onReportPush,
-        .getTimeMillis = getTimeMillis,
-        .scheduleCall = scheduler.scheduleCall,
-        .cancelCall = scheduler.cancelCall,
-        .readKeymapBytes = readKeymapBytes,
-    });
-
     loadKeymapFromEeprom() catch {
         std.log.err("load keymap failed", .{});
     };
 
-    engine.setup() catch {
-        std.log.err("engine setup failed", .{});
+    engine = kirei.Engine.init(
+        .{
+            .allocator = umm.allocator(),
+            .onReportPush = ble_dev.onReportPush,
+            .getTimeMillis = getTimeMillis,
+            .scheduleCall = scheduler.scheduleCall,
+            .cancelCall = scheduler.cancelCall,
+        },
+        &keymap,
+    ) catch |e| {
+        std.log.err("engine init failed: {any}", .{e});
+        return;
     };
 }
 
@@ -51,7 +52,9 @@ fn loadKeymapFromEeprom() !void {
         const block_slice = block[0..block_len];
 
         try eeprom.read(@truncate(byte_offset), block_slice);
-        try flash.write(&keymap[byte_offset], block_slice);
+        @memcpy(keymap[byte_offset .. byte_offset + block_len], block_slice);
+        // TODO: Fix. This is unreliable.
+        // try flash.write(&keymap[byte_offset], block_slice);
     }
 }
 
@@ -70,8 +73,4 @@ pub fn pushKeyEvent(key_idx: kirei.KeyIndex, down: bool) void {
 fn getTimeMillis() kirei.TimeMillis {
     // TODO: Handle wrap over rtc.MAX_CYCLE_32K
     return @intCast(rtc.getTimeMillis() % std.math.maxInt(u16));
-}
-
-fn readKeymapBytes(offset: usize, len: usize) []const u8 {
-    return keymap[offset .. offset + len];
 }

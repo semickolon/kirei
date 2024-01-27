@@ -65,7 +65,7 @@ pub inline fn nop() void {
 
 pub inline fn mret() noreturn {
     asm volatile ("mret");
-    unreachable;
+    while (true) {}
 }
 
 pub inline fn wfi() void {

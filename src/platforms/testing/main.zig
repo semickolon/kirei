@@ -9,28 +9,9 @@ var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 
 var scheduler = Scheduler.init(callScheduled);
 
-var engine = kirei.Engine.init(.{
-    .allocator = gpa.allocator(),
-    .onReportPush = onReportPush,
-    .getTimeMillis = getTimeMillis,
-    .scheduleCall = scheduleCall,
-    .cancelCall = cancelCall,
-    .readKeymapBytes = readKeymapBytes,
-});
+var engine: kirei.Engine = undefined;
 
-pub const key_map = [_]u8{
-    0x69, 0xFA, 1,    0,
-    9,    0,    0,    0,
-    3,    2,    0xFA, 0x50,
-    3,    0,    0x1A, 0,
-    3,    0,    10,   0,
-    3,    0,    0x15, 0,
-    3,    0,    0x17, 0,
-    3,    0,    0x1C, 0,
-    3,    0,    0x18, 0,
-    3,    0,    0x0C, 0,
-    3,    0,    0xE1, 0,
-};
+pub const key_map align(4) = [_]u8{ 105, 250, 1, 0, 9, 0, 10, 0, 17, 0, 0, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8, 0, 26, 0, 9, 0, 10, 0, 11, 0, 12, 0, 13, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8, 0, 9, 0, 19, 0, 1, 0, 0, 0, 254, 127, 0, 0, 1, 167, 34, 0, 1, 0, 1, 0, 254, 127, 0, 0, 1, 167, 34, 0, 1, 0, 2, 0, 254, 127, 0, 0, 1, 167, 34, 0, 1, 0, 3, 0, 254, 127, 0, 0, 1, 167, 34, 0, 1, 0, 4, 0, 254, 127, 0, 0, 1, 167, 34, 0, 1, 0, 6, 0, 254, 127, 0, 0, 1, 16, 41, 0, 1, 0, 7, 0, 254, 127, 0, 0, 1, 16, 41, 0, 1, 0, 8, 0, 254, 127, 0, 0, 1, 16, 41, 0, 1, 0, 9, 0, 254, 127, 0, 0, 1, 16, 41, 0, 1, 0, 10, 0, 254, 127, 0, 0, 1, 16, 41, 0, 5, 0, 0, 0, 250, 0, 170, 170, 3, 1, 0, 0, 1, 0, 5, 0, 250, 0, 170, 170, 1, 1, 0, 0, 5, 0, 5, 0, 250, 0, 170, 170, 3, 1, 0, 0, 1, 0, 11, 0, 250, 0, 170, 170, 1, 1, 0, 0, 1, 0, 12, 0, 250, 0, 170, 170, 1, 1, 0, 0, 1, 0, 13, 0, 250, 0, 170, 170, 1, 1, 0, 0, 1, 0, 14, 0, 250, 0, 170, 170, 1, 1, 0, 0, 1, 0, 15, 0, 250, 0, 170, 170, 1, 1, 0, 0, 1, 0, 16, 0, 250, 0, 170, 170, 1, 1, 0, 0, 0, 0, 0, 0 };
 
 fn onReportPush(report: *const HidReport) bool {
     std.log.debug("{any}", .{report.*});
@@ -52,10 +33,6 @@ fn cancelCall(token: kirei.ScheduleToken) void {
 
 fn callScheduled(token: kirei.ScheduleToken) void {
     engine.callScheduled(token);
-}
-
-fn readKeymapBytes(offset: usize, len: usize) []const u8 {
-    return key_map[offset .. offset + len];
 }
 
 fn print(str: []const u8) void {
@@ -87,6 +64,7 @@ pub const Step = union(enum) {
 };
 
 const steps = [_]Step{
+    Step.k(4, true),
     Step.k(0, true),
     Step.w(175),
     Step.k(0, false),
@@ -96,6 +74,12 @@ const steps = [_]Step{
     Step.w(200),
     Step.k(0, true),
     Step.w(300),
+    Step.k(0, false),
+    Step.w(300),
+    Step.k(1, true),
+    Step.k(5, true),
+    Step.k(1, false),
+    Step.k(5, false),
 };
 
 fn process() void {
@@ -104,7 +88,16 @@ fn process() void {
 }
 
 pub fn main() !void {
-    engine.setup() catch unreachable;
+    engine = try kirei.Engine.init(
+        .{
+            .allocator = gpa.allocator(),
+            .onReportPush = onReportPush,
+            .getTimeMillis = getTimeMillis,
+            .scheduleCall = scheduleCall,
+            .cancelCall = cancelCall,
+        },
+        &key_map,
+    );
 
     for (steps) |step| {
         process();

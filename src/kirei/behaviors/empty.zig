@@ -8,6 +8,12 @@ const ProcessResult = eng.ProcessResult;
 
 const Self = @This();
 
+pub const Config = struct {};
+
+pub fn init(_: Config) Self {
+    return .{};
+}
+
 pub fn process(_: *Self, _: KeyIndex, _: *Engine, ev: *Event) ProcessResult {
     ev.markHandled();
     return .complete;

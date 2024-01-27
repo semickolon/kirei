@@ -81,3 +81,22 @@ pub const std_options = struct {
 export fn _zigstart() noreturn {
     main();
 }
+
+export fn HardFault_Handler() noreturn {
+    const mcause: usize = asm volatile ("csrr %[ret], mcause"
+        : [ret] "={t0}" (-> usize),
+    );
+
+    const mepc: usize = asm volatile ("csrr %[ret], mepc"
+        : [ret] "={t0}" (-> usize),
+    );
+
+    const mtval: usize = asm volatile ("csrr %[ret], mtval"
+        : [ret] "={t0}" (-> usize),
+    );
+
+    std.log.err("MCAUSE: {}", .{mcause});
+    std.log.err("MEPC: {}", .{mepc});
+    std.log.err("MTVAL: {}", .{mtval});
+    @panic("HARD FAULT");
+}
