@@ -7,11 +7,9 @@ pub const CollectionIndex = struct {
 };
 
 pub fn Hana(comptime T: type, comptime col_indices: []const CollectionIndex) type {
-    assert(col_indices.len <= 32);
-
     return struct {
         value: *align(4) const T,
-        collections: [32][]align(4) const u8,
+        collections: [col_indices.len][]align(4) const u8,
 
         const Self = @This();
 
@@ -32,11 +30,7 @@ pub fn Hana(comptime T: type, comptime col_indices: []const CollectionIndex) typ
 
         pub fn deserialize(bytes: []align(4) const u8) Self {
             var byte_offset: usize = @sizeOf(T);
-            var collections: [32][]align(4) const u8 = undefined;
-
-            while (byte_offset % 4 != 0) {
-                byte_offset += 1;
-            }
+            var collections: [col_indices.len][]align(4) const u8 = undefined;
 
             inline for (col_indices, 0..) |col_index, i| {
                 if (col_index.Index == void) {
@@ -123,14 +117,29 @@ pub fn Hana(comptime T: type, comptime col_indices: []const CollectionIndex) typ
                     switch (@typeInfo(U.HanaInnerType.Inner)) {
                         .Pointer => |p| {
                             assert(p.size == .Slice);
-                            var yes: [obj.value.len]p.child = undefined;
+                            const len = obj.value.len;
+                            var yes: [len]p.child = undefined;
 
                             inline for (obj.value, 0..) |e, i| {
                                 yes[i] = serializeInner(p.child, e, collections);
                             }
 
-                            const idx = col.items.len;
-                            col.appendSlice(&yes) catch unreachable;
+                            const idx = blk: {
+                                // Compression
+                                if (col.items.len >= len) {
+                                    outer: for (0..col.items.len - len + 1) |i| {
+                                        for (0..len) |j| {
+                                            if (!std.meta.eql(yes[j], col.items[i + j]))
+                                                continue :outer;
+                                        }
+                                        // std.debug.print("saved {any}B\n", .{len * @sizeOf(p.child)});
+                                        break :blk i;
+                                    }
+                                }
+
+                                defer col.appendSlice(&yes) catch unreachable;
+                                break :blk col.items.len;
+                            };
 
                             return U{
                                 .len = @intCast(obj.value.len),
@@ -139,9 +148,16 @@ pub fn Hana(comptime T: type, comptime col_indices: []const CollectionIndex) typ
                         },
                         else => {
                             const u = serializeInner(U.HanaInnerType.Inner, obj.value, collections);
-                            const idx = col.items.len;
 
-                            col.append(u) catch unreachable;
+                            const idx = blk: for (col.items, 0..) |e, i| {
+                                // Compression
+                                if (std.meta.eql(e, u))
+                                    break :blk i;
+                            } else {
+                                defer col.append(u) catch unreachable;
+                                break :blk col.items.len;
+                            };
+
                             return U{ .idx = @intCast(idx) };
                         },
                     }
@@ -304,11 +320,10 @@ test {
                     .{ .key_press = .{ .value = .{4 + 'w' - 'a'} } },
                     .{ .tap_dance = .{
                         .bindings = .{ .value = .{
-                            .{ .key_press = .{ .value = .{9} } },
-                            .{ .key_press = .{ .value = .{10} } },
-                            .{ .key_press = .{ .value = .{11} } },
-                            .{ .key_press = .{ .value = .{12} } },
-                            .{ .key_press = .{ .value = .{13} } },
+                            .{ .key_press = .{ .value = .{5} } },
+                            .{ .key_press = .{ .value = .{6} } },
+                            .{ .key_press = .{ .value = .{7} } },
+                            .{ .key_press = .{ .value = .{8} } },
                         } },
                         .tapping_term_ms = 250,
                     } },
@@ -317,7 +332,7 @@ test {
                     .{ .key_press = .{ .value = .{6} } },
                     .{ .key_press = .{ .value = .{7} } },
                     .{ .key_press = .{ .value = .{8} } },
-                    .{ .key_press = .{ .value = .{9} } },
+                    .{ .key_press = .{ .value = .{ 0xE0, 6 } } },
                 },
             },
         },
