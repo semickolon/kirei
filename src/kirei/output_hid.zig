@@ -57,9 +57,11 @@ pub fn sendReports(self: *OutputHid) !void {
         if (self.impl.onReportPush(&head)) {
             _ = self.report_queue.pop();
         } else {
-            break;
+            return;
         }
-    } else if (self.is_report_dirty) {
+    }
+
+    if (self.is_report_dirty) {
         if (self.impl.onReportPush(&self.report))
             self.is_report_dirty = false;
     }
@@ -81,6 +83,10 @@ pub fn LinkedList(comptime T: type) type {
             return .{ .allocator = allocator };
         }
 
+        pub fn deinit(self: *Self) void {
+            while (self.pop()) |_| {}
+        }
+
         fn createNode(self: Self, data: T) !*Node {
             const node = try self.allocator.create(Node);
             node.data = data;
@@ -98,7 +104,8 @@ pub fn LinkedList(comptime T: type) type {
 
         pub fn append(self: *Self, data: T) !void {
             if (self.last_node) |last| {
-                last.insertAfter(try self.createNode(data));
+                self.last_node = try self.createNode(data);
+                last.insertAfter(self.last_node.?);
             } else {
                 try self.prepend(data);
             }
@@ -124,4 +131,21 @@ pub fn LinkedList(comptime T: type) type {
             }
         }
     };
+}
+
+test {
+    const expectEql = std.testing.expectEqual;
+
+    var list = LinkedList(u8).init(std.testing.allocator);
+    defer list.deinit();
+
+    try list.append(2);
+    try list.append(4);
+    try list.append(8);
+    try list.append(16);
+
+    try expectEql(list.pop(), 2);
+    try expectEql(list.pop(), 4);
+    try expectEql(list.pop(), 8);
+    try expectEql(list.pop(), 16);
 }
