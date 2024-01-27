@@ -43,6 +43,9 @@
             zls
             wchisp
             wlink
+            nickel
+            nls
+            topiary
           ];
       };
     };

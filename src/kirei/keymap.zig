@@ -33,8 +33,8 @@ pub const Keymap = struct {
     };
 
     pub const Header = packed struct(u32) {
-        magic: u16,
-        version: u16,
+        magic: u16 = MAGIC,
+        version: u16 = VERSION,
 
         pub const MAGIC: u16 = 0xFA69;
         pub const VERSION: u16 = 1;

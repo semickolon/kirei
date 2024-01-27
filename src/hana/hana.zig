@@ -299,51 +299,18 @@ test {
     var buf = std.ArrayListAligned(u8, 4).init(std.testing.allocator);
     defer buf.deinit();
 
+    const km = .{ .behaviors = .{ .value = .{ .{ .key_press = .{ .key_codes = .{ .value = .{4} } } }, .{ .key_press = .{ .key_codes = .{ .value = .{5} } } }, .{ .hold_tap = .{ .hold_behavior = .{ .value = .{ .key_press = .{ .key_codes = .{ .value = .{4} } } } }, .props = .{ .value = .{ .eager_decision = .none, .quick_tap_interrupt_ms = 0, .quick_tap_ms = 0, .timeout_decision = .hold, .timeout_ms = 200 } }, .tap_behavior = .{ .value = .{ .key_press = .{ .key_codes = .{ .value = .{ 224, 6 } } } } } } }, .{ .tap_dance = .{ .bindings = .{ .value = .{ .{ .key_press = .{ .key_codes = .{ .value = .{5} } } }, .{ .key_press = .{ .key_codes = .{ .value = .{4} } } } } }, .tapping_term_ms = 255 } } } }, .header = .{ .magic = 64105, .version = 1 } };
+
     Keymap.R.serialize(
         buf.writer(),
-        .{
-            .header = .{
-                .magic = 0xFA69,
-                .version = 1,
-            },
-            .key_defs = .{
-                .value = .{
-                    .{ .tap_dance = .{
-                        .bindings = .{ .value = .{
-                            .{ .key_press = .{ .value = .{4} } },
-                            .{ .key_press = .{ .value = .{5} } },
-                            .{ .key_press = .{ .value = .{6} } },
-                            .{ .key_press = .{ .value = .{7} } },
-                            .{ .key_press = .{ .value = .{8} } },
-                        } },
-                        .tapping_term_ms = 250,
-                    } },
-                    .{ .key_press = .{ .value = .{4 + 'w' - 'a'} } },
-                    .{ .tap_dance = .{
-                        .bindings = .{ .value = .{
-                            .{ .key_press = .{ .value = .{5} } },
-                            .{ .key_press = .{ .value = .{6} } },
-                            .{ .key_press = .{ .value = .{7} } },
-                            .{ .key_press = .{ .value = .{8} } },
-                        } },
-                        .tapping_term_ms = 250,
-                    } },
-                    .{ .key_press = .{ .value = .{4} } },
-                    .{ .key_press = .{ .value = .{5} } },
-                    .{ .key_press = .{ .value = .{6} } },
-                    .{ .key_press = .{ .value = .{7} } },
-                    .{ .key_press = .{ .value = .{8} } },
-                    .{ .key_press = .{ .value = .{ 0xE0, 6 } } },
-                },
-            },
-        },
+        km,
         std.testing.allocator,
     ) catch unreachable;
 
     std.debug.print("\n{any}B =>\n{any}\n", .{ buf.items.len, buf.items });
 
-    const r = Keymap.R.deserialize(buf.items);
-    std.debug.print("yo: {any}\n", .{r.value.key_defs.at(&r, 0).tap_dance.bindings.at(&r, 2).key_press.at(&r, 0)});
+    // const r = Keymap.R.deserialize(buf.items);
+    // std.debug.print("yo: {any}\n", .{r.value.key_defs.at(&r, 0).tap_dance.bindings.at(&r, 2).key_press.at(&r, 0)});
 
     var file = try std.fs.cwd().openFile("c", .{ .mode = .read_write });
     try file.writeAll(buf.items);
