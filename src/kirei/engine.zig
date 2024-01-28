@@ -216,7 +216,7 @@ pub const Engine = struct {
         if (time <= cur_time)
             self.insertRetroactiveTimeEvent(time, token)
         else
-            self.impl.scheduleCall(time - cur_time, token);
+            self.impl.scheduleCall(time -% cur_time, token);
 
         return token;
     }

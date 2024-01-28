@@ -74,7 +74,7 @@ fn tally(self: *Self, key_idx: KeyIndex, engine: *Engine, ev: *Event) bool {
 
                     if (self.tap_counter < self.bindings.len) {
                         if (self.tapping_term_token) |token| engine.cancelTimeEvent(token);
-                        self.tapping_term_token = engine.scheduleTimeEvent(ev.time + self.tapping_term_ms);
+                        self.tapping_term_token = engine.scheduleTimeEvent(ev.time +% self.tapping_term_ms);
                     } else {
                         return true;
                     }

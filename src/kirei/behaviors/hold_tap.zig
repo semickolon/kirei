@@ -50,7 +50,7 @@ pub fn process(self: *Self, key_idx: KeyIndex, engine: *Engine, ev: *Event) Proc
             if (key_idx == key_ev.key_idx) {
                 if (key_ev.down) {
                     if (self.timeout_token) |token| engine.cancelTimeEvent(token);
-                    self.timeout_token = engine.scheduleTimeEvent(ev.time + self.timeout_ms);
+                    self.timeout_token = engine.scheduleTimeEvent(ev.time +% self.timeout_ms);
                 } else {
                     return tap_decision;
                 }
