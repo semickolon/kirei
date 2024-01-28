@@ -3,8 +3,8 @@ const std = @import("std");
 const OutputHid = @import("output_hid.zig");
 
 const keymap = @import("keymap.zig");
-const Keymap = keymap.Keymap;
-const KeyDef = keymap.KeyDef;
+pub const Keymap = keymap.Keymap;
+pub const KeyDef = keymap.KeyDef;
 
 pub const KeyIndex = u15;
 pub const TimeMillis = u16;

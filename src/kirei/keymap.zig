@@ -15,16 +15,18 @@ pub const Keymap = struct {
     impl: Implementation,
     h: Hana = undefined,
 
-    const Hana = hana.Hana(File, &[_]hana.CollectionIndex{
+    pub const Hana = hana.Hana(File, &[_]hana.CollectionIndex{
         .{ .T = Keycode, .Index = u16 },
         .{ .T = BehaviorConfig, .Index = u16 },
         .{ .T = HoldTapBehavior.Props, .Index = u8 },
+        .{ .T = HoldTapBehavior.Props.KeyInterrupt, .Index = u16 },
     });
 
     pub const indices = struct {
         pub const keycodes = Hana.Indices[0];
         pub const behaviors = Hana.Indices[1];
         pub const hold_tap_props = Hana.Indices[2];
+        pub const hold_tap_key_interrupts = Hana.Indices[3];
     };
 
     pub const File = packed struct {

@@ -57,6 +57,7 @@ let rec types = {
         magic | Uint 16 | default = 64105,
         version | Uint 16 | default = 1,
     },
+    Keycode = Uint 16,
     Behavior = TaggedUnion
         [| 'key_press, 'hold_tap, 'tap_dance |]
         (match {
@@ -70,47 +71,24 @@ let rec types = {
             },
             'tap_dance => { 
                 bindings | LazySlice Behavior,
-                tapping_term_ms | Uint 16 | default = 200,
+                tapping_term_ms | Uint 14 | default = 200,
             }
         }),
-    Keycode = Uint 16,
     HoldTapProps = {
-        timeout_ms | Uint 13 | default = 200,
+        timeout_ms | Uint 14 | default = 200,
         timeout_decision | [| 'hold, 'tap |] | default = 'hold,
         eager_decision | [| 'none, 'hold, 'tap |] | default = 'none,
-        quick_tap_ms | Uint 12 | default = 0,
-        quick_tap_interrupt_ms | Uint 12 | default = 0,
+        key_interrupts | Array HoldTapKeyInterrupt | default = [],
+        quick_tap_ms | Uint 14 | default = 0,
+        quick_tap_interrupt_ms | Uint 14 | default = 0,
+        global_quick_tap_ms | Uint 14 | default = 0,
+        global_quick_tap_ignore_consecutive | Bool | default = false,
     },
+    HoldTapKeyInterrupt = [| 'none, 'hold_on_press, 'hold_on_release, 'tap_on_press, 'tap_on_release |],
 }
 in
 
-let kp = fun kcs => { tag = 'key_press, data.key_codes.value = kcs } in
-
-let ht = fun hold tap props' => { tag = 'hold_tap, data = {
-    hold_behavior.value = hold,
-    tap_behavior.value = tap,
-    props.value = props',
-} } in
-
-let td = fun tapping_term_ms' bindings' => { tag = 'tap_dance, data = {
-    bindings.value = bindings',
-    tapping_term_ms = tapping_term_ms',
-} } in
-
-let kc = {
-    A = [4],
-    B = [5],
-    LCTL = [224],
-    LCTL_A = LCTL @ A,
-} in
-
-({
-    behaviors.value = [
-        kp kc.A,
-        kp kc.B,
-        ht (kp [4]) (kp [224, 6]) {},
-        td 255 [kp kc.B, kp kc.A],
-    ],
-} | types.Root)
-|> transform
-|> toZon
+{
+    Keymap = types.Root,
+    parseKeymap = fun km => "pub const K = %{toZon (transform ({ behaviors.value = km } | Keymap))};",
+}

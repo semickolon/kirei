@@ -13,11 +13,11 @@ const ScheduleToken = eng.ScheduleToken;
 
 pub const Config = struct {
     bindings: Keymap.indices.behaviors.Slice,
-    tapping_term_ms: u16,
+    tapping_term_ms: u14,
 };
 
 bindings: Keymap.indices.behaviors.Slice,
-tapping_term_ms: u16,
+tapping_term_ms: u14,
 
 tap_counter: u8 = 0,
 resolved_tap_count: u8 = 0,

@@ -17,17 +17,28 @@ pub const Config = struct {
     props: Keymap.indices.hold_tap_props.Single,
 };
 
-pub const Props = packed struct {
-    timeout_ms: u13 = 200,
+pub const Props = struct {
+    timeout_ms: u14 = 200,
     timeout_decision: enum(u1) { hold, tap } = .hold,
     eager_decision: enum(u2) { none, hold, tap } = .none,
-    quick_tap_ms: u12 = 0,
-    quick_tap_interrupt_ms: u12 = 0,
+    key_interrupts: Keymap.indices.hold_tap_key_interrupts.Slice,
+    quick_tap_ms: u14 = 0,
+    quick_tap_interrupt_ms: u14 = 0,
+    global_quick_tap_ms: u14 = 0,
+    global_quick_tap_ignore_consecutive: bool = false,
+
+    pub const KeyInterrupt = enum(u3) {
+        none,
+        hold_on_press,
+        hold_on_release,
+        tap_on_press,
+        tap_on_release,
+    };
 };
 
 hold_behavior: Keymap.indices.behaviors.Single,
 tap_behavior: Keymap.indices.behaviors.Single,
-timeout_ms: u16,
+props: Keymap.indices.hold_tap_props.Single,
 
 timeout_token: ?ScheduleToken = null,
 
@@ -37,20 +48,21 @@ pub fn init(config: Config) Self {
     return .{
         .hold_behavior = config.hold_behavior,
         .tap_behavior = config.tap_behavior,
-        .timeout_ms = 200, // TODO
+        .props = config.props,
     };
 }
 
 pub fn process(self: *Self, key_idx: KeyIndex, engine: *Engine, ev: *Event) ProcessResult {
     const hold_decision = .{ .transform = keyPressDef(key_idx, self.hold_behavior.get(&engine.keymap.h)) };
     const tap_decision = .{ .transform = keyPressDef(key_idx, self.tap_behavior.get(&engine.keymap.h)) };
+    const props = self.props.get(&engine.keymap.h);
 
     switch (ev.data) {
         .key => |key_ev| {
             if (key_idx == key_ev.key_idx) {
                 if (key_ev.down) {
                     if (self.timeout_token) |token| engine.cancelTimeEvent(token);
-                    self.timeout_token = engine.scheduleTimeEvent(ev.time +% self.timeout_ms);
+                    self.timeout_token = engine.scheduleTimeEvent(ev.time +% props.timeout_ms);
                 } else {
                     return tap_decision;
                 }
