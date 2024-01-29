@@ -1,4 +1,5 @@
 const std = @import("std");
+const rp2040 = @import("rp2040");
 
 pub fn build(b: *std.Build) void {
     const hana = b.createModule(.{ .source_file = .{ .path = "src/hana/hana.zig" } });
@@ -10,6 +11,8 @@ pub fn build(b: *std.Build) void {
     });
     const umm = b.createModule(.{ .source_file = .{ .path = "src/lib/umm/umm.zig" } });
     const uuid = b.createModule(.{ .source_file = .{ .path = "src/lib/uuid/uuid.zig" } });
+
+    const microzig = @import("microzig").init(b, "microzig");
 
     // step: keymap
     const nickel = b.addSystemCommand(&.{ "nickel", "export", "--format", "raw", "-f", "src/keymap.ncl" });
@@ -39,19 +42,19 @@ pub fn build(b: *std.Build) void {
 
     // step: default
     const platform = b.option(
-        enum { testing, ch58x },
+        enum { testing, ch58x, rp2040 },
         "platform",
         "Platform to build for",
     ) orelse .testing;
 
     const target = switch (platform) {
-        .testing => b.standardTargetOptions(.{}),
         .ch58x => std.zig.CrossTarget{
             .cpu_arch = std.Target.Cpu.Arch.riscv32,
             .os_tag = std.Target.Os.Tag.freestanding,
             .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
             .cpu_features_add = std.Target.riscv.featureSet(&.{ .c, .m, .a }),
         },
+        else => b.standardTargetOptions(.{}),
     };
 
     const optimize = b.standardOptimizeOption(.{});
@@ -59,21 +62,44 @@ pub fn build(b: *std.Build) void {
     const root_path = switch (platform) {
         .testing => "src/platforms/testing/main.zig",
         .ch58x => "src/platforms/ch58x/main.zig",
+        .rp2040 => "src/platforms/rp2040/main.zig",
     };
 
-    const exe = b.addExecutable(.{
-        .name = switch (platform) {
-            .testing => "kirei-testing",
-            .ch58x => "kirei-ch58x",
-        },
-        .root_source_file = .{ .path = root_path },
-        .target = target,
-        .optimize = optimize,
-    });
+    const name = switch (platform) {
+        .testing => "kirei-testing",
+        .ch58x => "kirei-ch58x",
+        .rp2040 => "kirei-rp2040",
+    };
 
-    exe.addModule("kirei", kirei);
-    exe.addModule("umm", umm);
-    exe.addModule("uuid", uuid);
+    const microzig_fw = if (platform == .rp2040)
+        microzig.addFirmware(b, .{
+            .name = name,
+            .target = rp2040.boards.raspberry_pi.pico,
+            .optimize = optimize,
+            .source_file = .{ .path = root_path },
+        })
+    else
+        null;
+
+    const exe = if (microzig_fw) |fw|
+        fw.artifact
+    else
+        b.addExecutable(.{
+            .name = name,
+            .target = target,
+            .optimize = optimize,
+            .root_source_file = .{ .path = root_path },
+        });
+
+    if (microzig_fw) |fw| {
+        fw.addAppDependency("kirei", kirei, .{});
+        fw.addAppDependency("umm", umm, .{});
+        fw.addAppDependency("uuid", uuid, .{});
+    } else {
+        exe.addModule("kirei", kirei);
+        exe.addModule("umm", umm);
+        exe.addModule("uuid", uuid);
+    }
 
     if (platform == .testing) {
         exe.addAnonymousModule("keymap", .{ .source_file = keymap_gen_run.captureStdOut() });
@@ -91,6 +117,10 @@ pub fn build(b: *std.Build) void {
         }, &.{});
 
         exe.addIncludePath(.{ .path = "src/platforms/ch58x/lib" });
+    }
+
+    if (microzig_fw) |fw| {
+        microzig.installFirmware(b, fw, .{});
     }
 
     b.installArtifact(exe);
