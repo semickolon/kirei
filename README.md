@@ -31,6 +31,11 @@ Kirei uses a keymap file that is portable across all implementations. With embed
 - My cheap tool says "0 mA" and, at this point, I need a better power profiling instrument to further optimize power consumption. Nonetheless, it should have pretty decent battery life.
 - Keymap is read from EEPROM so it can be dynamically updated like VIA.
 
+### RP2040
+
+- USB HID is working.
+- The next step is to implement the scheduler and make a unified keyboard configuration for embedded implementations. That is, CH58x and RP2040 (and others in the future) would share a common hardware config.
+
 ### Testing
 
 - For testing key presses against keymaps.
