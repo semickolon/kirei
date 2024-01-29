@@ -9,6 +9,7 @@ const usb = @import("usb.zig");
 
 const UmmAllocator = @import("umm").UmmAllocator(.{});
 
+// TODO: I cannot figure out how to embed this directly from `build.zig` since MicroZig has its own API over std build
 const keymap align(4) = @embedFile("keymap.kirei").*;
 
 var engine: kirei.Engine = undefined;
