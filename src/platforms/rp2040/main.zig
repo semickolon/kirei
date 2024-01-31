@@ -3,12 +3,12 @@ const microzig = @import("microzig");
 
 const usb = @import("usb.zig");
 const interface = @import("interface.zig");
+const gpio = @import("gpio.zig").Gpio;
 
 const rp2040 = microzig.hal;
 const time = rp2040.time;
-const gpio = rp2040.gpio;
 
-const led = gpio.num(25);
+const led = gpio.pin(.P25);
 const uart = rp2040.uart.num(0);
 
 pub const std_options = struct {
@@ -23,14 +23,13 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
 }
 
 pub fn main() !void {
-    led.set_function(.sio);
-    led.set_direction(.out);
-    led.put(1);
+    led.config(.output);
+    led.write(true);
 
     uart.apply(.{
         .baud_rate = 115200,
-        .tx_pin = gpio.num(0),
-        .rx_pin = gpio.num(1),
+        .tx_pin = rp2040.gpio.num(0),
+        .rx_pin = rp2040.gpio.num(1),
         .clock_config = rp2040.clock_config,
     });
 
@@ -41,7 +40,6 @@ pub fn main() !void {
 
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
-    var down = false;
 
     while (true) {
         try usb.process();
@@ -52,9 +50,6 @@ pub fn main() !void {
         if (new - old > 500000) {
             old = new;
             led.toggle();
-
-            down = !down;
-            interface.pushKeyEvent(0, down);
         }
     }
 }

@@ -133,9 +133,9 @@ pub fn process() !void {
     );
 }
 
-pub fn sendReport(report: *const [8]u8) void {
-    usb.Usb.callbacks.usb_start_tx(
-        &EP1_IN_CFG,
-        report,
-    );
+pub fn sendReport(report: *const [8]u8) !void {
+    if (!usb.buffer_available(&EP1_IN_CFG))
+        return error.BufferUnavailable;
+
+    usb.Usb.callbacks.usb_start_tx(&EP1_IN_CFG, report);
 }

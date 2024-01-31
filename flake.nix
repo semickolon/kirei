@@ -41,11 +41,12 @@
           with pkgs; [
             zig
             zls
-            wchisp
-            wlink
             nickel
             nls
             topiary
+            wchisp
+            wlink
+            picotool
           ];
       };
     };

@@ -1,5 +1,6 @@
 const std = @import("std");
 const kirei = @import("kirei");
+const common = @import("common");
 
 const microzig = @import("microzig");
 const rp2040 = microzig.hal;
@@ -7,6 +8,7 @@ const time = rp2040.time;
 
 const usb = @import("usb.zig");
 const scheduler = @import("scheduler.zig");
+const Gpio = @import("gpio.zig").Gpio;
 
 const UmmAllocator = @import("umm").UmmAllocator(.{});
 
@@ -18,6 +20,20 @@ var engine: kirei.Engine = undefined;
 var umm: UmmAllocator = undefined;
 var umm_heap = std.mem.zeroes([32 * 1024]u8);
 
+var d1 = common.CycleDebouncer(u7){};
+
+const kscan = common.Kscan(Gpio){
+    .drivers = &.{
+        .{ .matrix = .{
+            .cols = &.{ Gpio.pin(.P2), Gpio.pin(.P3) },
+            .rows = &.{ Gpio.pin(.P4), Gpio.pin(.P5) },
+            .debouncer = &d1,
+        } },
+    },
+    .key_mapping = &.{ 1, null, 2, 0 },
+    .engine = &engine,
+};
+
 pub fn init() void {
     umm = UmmAllocator.init(&umm_heap) catch {
         std.log.err("umm alloc init failed", .{});
@@ -25,6 +41,7 @@ pub fn init() void {
     };
 
     scheduler.init(umm.allocator());
+    kscan.setup();
 
     engine = kirei.Engine.init(
         .{
@@ -43,11 +60,12 @@ pub fn init() void {
 
 pub fn process() void {
     scheduler.process();
+    kscan.scan();
     engine.process();
 }
 
 fn onReportPush(report: *const [8]u8) bool {
-    usb.sendReport(report);
+    usb.sendReport(report) catch return false;
     return true;
 }
 
