@@ -34,7 +34,7 @@ pub fn init() void {
         .{
             .allocator = umm.allocator(),
             .onReportPush = ble_dev.onReportPush,
-            .getTimeMillis = getTimeMillis,
+            .getTimeMillis = getKireiTimeMillis,
             .scheduleCall = scheduler.enqueue,
             .cancelCall = scheduler.cancel,
         },
@@ -72,7 +72,7 @@ pub fn pushKeyEvent(key_idx: kirei.KeyIndex, down: bool) void {
     engine.pushKeyEvent(key_idx, down);
 }
 
-fn getTimeMillis() kirei.TimeMillis {
+fn getKireiTimeMillis() kirei.TimeMillis {
     // TODO: Handle wrap over rtc.MAX_CYCLE_32K
     return @intCast(rtc.getTimeMillis() % (std.math.maxInt(u16) + 1));
 }

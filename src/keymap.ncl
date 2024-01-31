@@ -7,5 +7,5 @@ parseKeymap [
         key_press kc.B,
     ],
     hold_tap (key_press kc.C) (key_press kc.D) {},
-    key_press kc.A,
+    key_press kc.C,
 ]

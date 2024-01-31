@@ -6,6 +6,7 @@ const rp2040 = microzig.hal;
 const time = rp2040.time;
 
 const usb = @import("usb.zig");
+const scheduler = @import("scheduler.zig");
 
 const UmmAllocator = @import("umm").UmmAllocator(.{});
 
@@ -23,13 +24,15 @@ pub fn init() void {
         return;
     };
 
+    scheduler.init(umm.allocator());
+
     engine = kirei.Engine.init(
         .{
             .allocator = umm.allocator(),
             .onReportPush = onReportPush,
-            .getTimeMillis = getTimeMillis,
-            .scheduleCall = scheduleCall,
-            .cancelCall = cancelCall,
+            .getTimeMillis = getKireiTimeMillis,
+            .scheduleCall = scheduler.enqueue,
+            .cancelCall = scheduler.cancel,
         },
         &keymap,
     ) catch |e| {
@@ -39,6 +42,7 @@ pub fn init() void {
 }
 
 pub fn process() void {
+    scheduler.process();
     engine.process();
 }
 
@@ -55,16 +59,7 @@ pub fn pushKeyEvent(key_idx: kirei.KeyIndex, down: bool) void {
     engine.pushKeyEvent(key_idx, down);
 }
 
-fn getTimeMillis() kirei.TimeMillis {
+fn getKireiTimeMillis() kirei.TimeMillis {
     const time_ms = time.get_time_since_boot().to_us() / 1000;
     return @intCast(time_ms % (std.math.maxInt(kirei.TimeMillis) + 1));
-}
-
-pub fn scheduleCall(duration: kirei.TimeMillis, token: kirei.ScheduleToken) void {
-    _ = token;
-    _ = duration;
-}
-
-pub fn cancelCall(token: kirei.ScheduleToken) void {
-    _ = token;
 }
