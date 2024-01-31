@@ -1,42 +1,23 @@
 const std = @import("std");
 const kirei = @import("kirei");
 
-const Scheduler = @import("scheduler.zig");
+const scheduler = @import("scheduler.zig");
 
 const HidReport = [8]u8;
 
-var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+pub var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+pub var engine: kirei.Engine = undefined;
 
-var scheduler = Scheduler.init(callScheduled);
-
-var engine: kirei.Engine = undefined;
-
-pub const keymap align(4) = @embedFile("keymap").*;
+const keymap align(4) = @embedFile("keymap").*;
 
 fn onReportPush(report: *const HidReport) bool {
     std.log.debug("{any}", .{report.*});
     return true;
 }
 
-fn getTimeMillis() kirei.TimeMillis {
-    const t: u64 = Scheduler.getTimeMillis();
+fn getKireiTimeMillis() kirei.TimeMillis {
+    const t: u64 = scheduler.getTimeMillis();
     return @truncate(t % (std.math.maxInt(kirei.TimeMillis) + 1));
-}
-
-fn scheduleCall(duration: kirei.TimeMillis, token: kirei.ScheduleToken) void {
-    scheduler.schedule(duration, token);
-}
-
-fn cancelCall(token: kirei.ScheduleToken) void {
-    scheduler.cancel(token);
-}
-
-fn callScheduled(token: kirei.ScheduleToken) void {
-    engine.callScheduled(token);
-}
-
-fn print(str: []const u8) void {
-    _ = std.io.getStdOut().write(str) catch unreachable;
 }
 
 pub const Step = union(enum) {
@@ -57,29 +38,27 @@ pub const Step = union(enum) {
     fn do(self: Step) ?u64 {
         switch (self) {
             .key => |ks| engine.pushKeyEvent(ks.key_idx, ks.down),
-            .wait => |ms| return Scheduler.getTimeMillis() + ms,
+            .wait => |ms| return scheduler.getTimeMillis() + ms,
         }
         return null;
     }
 };
 
 const steps = [_]Step{
-    Step.k(4, true),
     Step.k(0, true),
-    Step.w(175),
+    Step.k(0, false),
+    Step.w(300),
+    Step.k(0, true),
+    Step.w(100),
     Step.k(0, false),
     Step.w(100),
     Step.k(0, true),
-    Step.k(0, false),
-    Step.w(200),
-    Step.k(0, true),
-    Step.w(300),
-    Step.k(0, false),
     Step.w(300),
     Step.k(1, true),
-    Step.k(5, true),
     Step.k(1, false),
-    Step.k(5, false),
+    Step.k(1, true),
+    Step.w(250),
+    // Step.k(1, false),
 };
 
 fn process() void {
@@ -92,9 +71,9 @@ pub fn main() !void {
         .{
             .allocator = gpa.allocator(),
             .onReportPush = onReportPush,
-            .getTimeMillis = getTimeMillis,
-            .scheduleCall = scheduleCall,
-            .cancelCall = cancelCall,
+            .getTimeMillis = getKireiTimeMillis,
+            .scheduleCall = scheduler.enqueue,
+            .cancelCall = scheduler.cancel,
         },
         &keymap,
     );
@@ -103,7 +82,7 @@ pub fn main() !void {
         process();
 
         if (step.do()) |wait_until| {
-            while (Scheduler.getTimeMillis() < wait_until) {
+            while (scheduler.getTimeMillis() < wait_until) {
                 process();
             }
         }

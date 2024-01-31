@@ -6,7 +6,7 @@ let Uint = fun bits => std.contract.from_predicate (fun value =>
 ) in
 
 let LazyIndexed = fun T => { value | T } in
-let LazySlice = fun T => { value | Array T } in
+let LazySlice = fun T => { value | Array T | default = [] } in
 
 let rec transform = fun e =>
     if std.is_record e then
@@ -78,7 +78,7 @@ let rec types = {
         timeout_ms | Uint 14 | default = 200,
         timeout_decision | [| 'hold, 'tap |] | default = 'hold,
         eager_decision | [| 'none, 'hold, 'tap |] | default = 'none,
-        key_interrupts | Array HoldTapKeyInterrupt | default = [],
+        key_interrupts | LazySlice HoldTapKeyInterrupt | default = {},
         quick_tap_ms | Uint 14 | default = 0,
         quick_tap_interrupt_ms | Uint 14 | default = 0,
         global_quick_tap_ms | Uint 14 | default = 0,

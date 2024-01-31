@@ -9,6 +9,12 @@ pub fn build(b: *std.Build) void {
             .{ .name = "hana", .module = hana },
         },
     });
+    const common = b.createModule(.{
+        .source_file = .{ .path = "src/common/common.zig" },
+        .dependencies = &.{
+            .{ .name = "kirei", .module = kirei },
+        },
+    });
     const umm = b.createModule(.{ .source_file = .{ .path = "src/lib/umm/umm.zig" } });
     const uuid = b.createModule(.{ .source_file = .{ .path = "src/lib/uuid/uuid.zig" } });
 
@@ -93,10 +99,12 @@ pub fn build(b: *std.Build) void {
 
     if (microzig_fw) |fw| {
         fw.addAppDependency("kirei", kirei, .{});
+        fw.addAppDependency("common", common, .{});
         fw.addAppDependency("umm", umm, .{});
         fw.addAppDependency("uuid", uuid, .{});
     } else {
         exe.addModule("kirei", kirei);
+        exe.addModule("common", common);
         exe.addModule("umm", umm);
         exe.addModule("uuid", uuid);
     }
