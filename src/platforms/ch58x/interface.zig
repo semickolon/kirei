@@ -28,13 +28,15 @@ pub fn init() void {
         std.log.err("load keymap failed", .{});
     };
 
+    scheduler.init(umm.allocator());
+
     engine = kirei.Engine.init(
         .{
             .allocator = umm.allocator(),
             .onReportPush = ble_dev.onReportPush,
             .getTimeMillis = getTimeMillis,
-            .scheduleCall = scheduler.scheduleCall,
-            .cancelCall = scheduler.cancelCall,
+            .scheduleCall = scheduler.enqueue,
+            .cancelCall = scheduler.cancel,
         },
         &keymap,
     ) catch |e| {
