@@ -4,7 +4,7 @@ const kirei = @import("kirei");
 const assert = std.debug.assert;
 const KeyIndex = kirei.KeyIndex;
 
-pub fn ScanIter(comptime Gpio: type) type {
+fn ScanIter(comptime Gpio: type) type {
     return struct {
         key_idx: KeyIndex = 0,
         kscan: *const Kscan(Gpio),

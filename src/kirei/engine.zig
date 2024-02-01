@@ -6,16 +6,16 @@ const keymap = @import("keymap.zig");
 pub const Keymap = keymap.Keymap;
 pub const KeyDef = keymap.KeyDef;
 
-pub const KeyIndex = u15;
+pub const KeyIndex = u8;
 pub const TimeMillis = u16;
 pub const ScheduleToken = u8;
 
-pub const KeyEvent = packed struct(u16) {
+pub const KeyEvent = struct {
     key_idx: KeyIndex,
     down: bool,
 };
 
-pub const TimeEvent = packed struct {
+pub const TimeEvent = struct {
     token: ScheduleToken,
 };
 
