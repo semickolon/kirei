@@ -13,13 +13,13 @@ pub fn SingleScheduler(
     std.debug.assert(AbsoluteMillis == u32 or AbsoluteMillis == u64);
 
     return struct {
-        tasks: TaskArray,
-        active_tokens: TokenSet,
+        tasks: TaskArray = TaskArray.init(0) catch unreachable,
+        active_tokens: TokenSet = TokenSet.initEmpty(),
 
         const MAX_TOKEN_COUNT = std.math.maxInt(Token) + 1;
 
         const Self = @This();
-        const TaskArray = std.ArrayList(Task);
+        const TaskArray = std.BoundedArray(Task, MAX_TOKEN_COUNT);
         const TokenSet = std.StaticBitSet(MAX_TOKEN_COUNT);
 
         const Task = struct {
@@ -27,31 +27,20 @@ pub fn SingleScheduler(
             token: Token,
         };
 
-        pub fn init(allocator: std.mem.Allocator) Self {
-            return .{
-                .tasks = TaskArray.init(allocator),
-                .active_tokens = TokenSet.initEmpty(),
-            };
-        }
-
-        pub fn deinit(self: *Self) void {
-            self.tasks.deinit();
-        }
-
         pub fn enqueue(self: *Self, duration: Duration, token: Token) void {
             self.cancel(token);
 
             const time_millis = implGetTime() + duration;
 
-            const idx = for (self.tasks.items, 0..) |task, i| {
+            const idx = for (self.tasks.constSlice(), 0..) |task, i| {
                 if (task.time_millis > time_millis)
                     break i;
-            } else self.tasks.items.len;
+            } else self.tasks.len;
 
             self.tasks.insert(idx, .{
                 .time_millis = time_millis,
                 .token = token,
-            }) catch unreachable;
+            }) catch @panic("schedins");
 
             self.active_tokens.set(token);
 
@@ -64,7 +53,7 @@ pub fn SingleScheduler(
             if (!self.active_tokens.isSet(token))
                 return;
 
-            const idx = for (self.tasks.items, 0..) |task, i| {
+            const idx = for (self.tasks.constSlice(), 0..) |task, i| {
                 if (token == task.token)
                     break i;
             } else unreachable;
@@ -73,7 +62,7 @@ pub fn SingleScheduler(
             self.active_tokens.unset(token);
 
             if (idx == 0) {
-                if (self.tasks.items.len > 0) {
+                if (self.tasks.len > 0) {
                     self.scheduleNextTask();
                 } else {
                     implSchedule(null);
@@ -89,8 +78,8 @@ pub fn SingleScheduler(
         fn scheduleNextTask(self: *Self) void {
             const now = implGetTime();
 
-            while (self.tasks.items.len > 0) {
-                const task = self.tasks.items[0];
+            while (self.tasks.len > 0) {
+                const task = self.tasks.get(0);
 
                 if (now >= task.time_millis) {
                     self.callAndRemoveCurrentTask();
@@ -102,7 +91,7 @@ pub fn SingleScheduler(
         }
 
         fn callAndRemoveCurrentTask(self: *Self) void {
-            const task = self.tasks.items[0];
+            const task = self.tasks.get(0);
             implCallback(task.token);
             _ = self.tasks.orderedRemove(0);
             self.active_tokens.unset(task.token);
@@ -142,7 +131,7 @@ test {
     };
 
     const Scheduler = SingleScheduler(u64, host.getTime, host.schedule, host.call);
-    var scheduler = Scheduler.init(std.testing.allocator);
+    var scheduler = Scheduler{};
     defer scheduler.deinit();
 
     scheduler.enqueue(100, 1);

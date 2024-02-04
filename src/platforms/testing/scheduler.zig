@@ -2,9 +2,9 @@ const std = @import("std");
 const kirei = @import("kirei");
 const main = @import("main.zig");
 
-const SingleScheduler = @import("common").SingleScheduler(u64, getTimeMillis, implSchedule, implCallback);
+const Scheduler = @import("common").SingleScheduler(u64, getTimeMillis, implSchedule, implCallback);
 
-var scheduler = SingleScheduler.init(main.gpa.allocator());
+var scheduler = Scheduler{};
 var scheduled_time: ?u64 = null;
 
 pub fn process() void {

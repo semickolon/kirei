@@ -10,12 +10,8 @@ const time = rp2040.time;
 
 const Scheduler = common.SingleScheduler(u64, getTimeMillis, implSchedule, interface.callScheduled);
 
-var scheduler: Scheduler = undefined;
+var scheduler = Scheduler{};
 var scheduled_time: ?u64 = null;
-
-pub fn init(allocator: std.mem.Allocator) void {
-    scheduler = Scheduler.init(allocator);
-}
 
 pub fn process() void {
     if (scheduled_time) |t| {

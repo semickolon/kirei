@@ -40,7 +40,6 @@ pub fn init() void {
         return;
     };
 
-    scheduler.init(umm.allocator());
     kscan.setup();
 
     engine = kirei.Engine.init(

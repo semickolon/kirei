@@ -28,8 +28,6 @@ pub fn init() void {
         std.log.err("load keymap failed", .{});
     };
 
-    scheduler.init(umm.allocator());
-
     engine = kirei.Engine.init(
         .{
             .allocator = umm.allocator(),

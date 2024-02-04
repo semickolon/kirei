@@ -15,12 +15,7 @@ const blueprint = tmos.TaskBlueprint{
 };
 var tmos_task: tmos.Task(blueprint.Event) = undefined;
 
-var scheduler: Scheduler = undefined;
-
-pub fn init(allocator: std.mem.Allocator) void {
-    tmos_task = tmos.register(blueprint);
-    scheduler = Scheduler.init(allocator);
-}
+var scheduler = Scheduler{};
 
 fn implSchedule(time: ?u32) void {
     if (time) |t| {
