@@ -74,32 +74,32 @@ pub const Engine = struct {
 
     const Self = @This();
 
-    const KeyDefList = std.ArrayList(KeyDef);
-    const EventList = std.ArrayList(Event);
+    const KeyDefList = std.BoundedArray(KeyDef, 16);
+    const EventList = std.BoundedArray(Event, 64);
 
     pub fn init(impl: Implementation, keymap_bytes: []align(4) const u8) !Self {
         return Self{
             .impl = impl,
             .keymap = try Keymap.init(impl, keymap_bytes),
             .output_hid = OutputHid.init(impl),
-            .key_defs = KeyDefList.init(impl.allocator),
-            .events = EventList.init(impl.allocator),
+            .key_defs = KeyDefList.init(0) catch unreachable,
+            .events = EventList.init(0) catch unreachable,
         };
     }
 
     pub fn process(self: *Self) void {
-        self.processEvents() catch unreachable;
-        self.output_hid.sendReports() catch unreachable;
+        self.processEvents();
+        self.output_hid.sendReports();
     }
 
     fn pushEvent(self: *Self, data: Event.Data) void {
-        self.events.append(Event.init(data, self.getTimeMillis())) catch unreachable;
+        self.events.append(Event.init(data, self.getTimeMillis())) catch @panic("Engine events overflow.");
     }
 
     fn unblockEvents(self: *Self, kd_idx: u6, pass_to_next_kd: bool) ?u8 {
         var first_blocked_ev_idx: ?u8 = null;
 
-        for (self.events.items, 0..) |*event, i| {
+        for (self.events.slice(), 0..) |*event, i| {
             if (event.kd_idx == kd_idx and event.blocked) {
                 event.blocked = false;
 
@@ -117,18 +117,18 @@ pub const Engine = struct {
         return first_blocked_ev_idx;
     }
 
-    fn processEvents(self: *Self) !void {
-        blk_ev: while (self.ev_idx < self.events.items.len) {
-            const ev = &self.events.items[self.ev_idx];
+    fn processEvents(self: *Self) void {
+        blk_ev: while (self.ev_idx < self.events.len) {
+            const ev = &self.events.slice()[self.ev_idx];
 
             if (ev.blocked) {
-                unreachable;
+                @panic("Engine encountered blocked event for processing.");
             }
 
             var kd_idx = ev.kd_idx;
 
-            while (kd_idx < self.key_defs.items.len) {
-                const key_def = &self.key_defs.items[kd_idx];
+            while (kd_idx < self.key_defs.len) {
+                const key_def = &self.key_defs.slice()[kd_idx];
                 const result = key_def.process(self, ev);
                 const is_ev_handled = ev.isHandled();
 
@@ -150,7 +150,7 @@ pub const Engine = struct {
                     .complete => {
                         const first_blocked_ev_idx = self.unblockEvents(kd_idx, false);
 
-                        for (self.events.items) |*event| {
+                        for (self.events.slice()) |*event| {
                             if (event.kd_idx > kd_idx)
                                 event.kd_idx -= 1;
                         }
@@ -193,7 +193,7 @@ pub const Engine = struct {
             switch (ev.data) {
                 .key => |key_ev| if (key_ev.down) {
                     const key_def = self.keymap.parseKeyDef(key_ev.key_idx);
-                    try self.key_defs.append(key_def);
+                    self.key_defs.append(key_def) catch @panic("Engine key_defs overflow.");
                     continue :blk_ev;
                 },
                 else => {},
@@ -204,7 +204,7 @@ pub const Engine = struct {
     }
 
     pub fn handleKeycode(self: *Self, keycode: u16, down: bool) void {
-        self.output_hid.pushHidEvent(@truncate(keycode), down) catch unreachable;
+        self.output_hid.pushHidEvent(@truncate(keycode), down);
     }
 
     pub fn scheduleTimeEvent(self: *Self, time: TimeMillis) ?ScheduleToken {
@@ -226,13 +226,13 @@ pub const Engine = struct {
     }
 
     fn insertRetroactiveTimeEvent(self: *Self, time: TimeMillis, token: ScheduleToken) void {
-        for (self.events.items, 0..) |ev, i| {
+        for (self.events.constSlice(), 0..) |ev, i| {
             if (ev.time >= time) {
                 self.events.insert(i, .{
                     .data = .{ .time = .{ .token = token } },
                     .kd_idx = ev.kd_idx,
                     .blocked = ev.blocked,
-                }) catch unreachable;
+                }) catch @panic("Engine events overflow 1.");
                 break;
             }
         } else {

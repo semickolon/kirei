@@ -7,23 +7,21 @@ pub const HidReport = [8]u8;
 
 const HidReportMods = std.bit_set.IntegerBitSet(8);
 const HidReportCodes = [6]u8;
-const ReportQueue = LinkedList(HidReport);
+// TODO: Likely better if this is a static ring buffer
+const ReportQueue = std.BoundedArray(HidReport, 32);
 
 report: HidReport = std.mem.zeroes(HidReport),
-report_queue: ReportQueue,
+report_queue: ReportQueue = ReportQueue.init(0) catch unreachable,
 is_report_dirty: bool = false,
 impl: engine.Implementation,
 
 pub fn init(impl: engine.Implementation) OutputHid {
-    return .{
-        .report_queue = ReportQueue.init(impl.allocator),
-        .impl = impl,
-    };
+    return .{ .impl = impl };
 }
 
-pub fn pushHidEvent(self: *OutputHid, code: u8, down: bool) !void {
+pub fn pushHidEvent(self: *OutputHid, code: u8, down: bool) void {
     if (self.is_report_dirty) {
-        try self.report_queue.append(self.report);
+        self.report_queue.append(self.report) catch @panic("OutputHid report queue overflow.");
         self.is_report_dirty = false;
     }
 
@@ -52,10 +50,12 @@ pub fn pushHidEvent(self: *OutputHid, code: u8, down: bool) !void {
     }
 }
 
-pub fn sendReports(self: *OutputHid) !void {
-    while (self.report_queue.peek()) |head| {
-        if (self.impl.onReportPush(&head)) {
-            _ = self.report_queue.pop();
+pub fn sendReports(self: *OutputHid) void {
+    while (self.report_queue.len > 0) {
+        const head = &self.report_queue.get(0);
+
+        if (self.impl.onReportPush(head)) {
+            _ = self.report_queue.orderedRemove(0);
         } else {
             return;
         }
@@ -65,87 +65,4 @@ pub fn sendReports(self: *OutputHid) !void {
         if (self.impl.onReportPush(&self.report))
             self.is_report_dirty = false;
     }
-}
-
-// Singly linked list but with a pointer to the last node for append operations
-pub fn LinkedList(comptime T: type) type {
-    const SinglyLinkedList = std.SinglyLinkedList(T);
-
-    return struct {
-        list: SinglyLinkedList = SinglyLinkedList{},
-        last_node: ?*SinglyLinkedList.Node = null,
-        allocator: std.mem.Allocator,
-
-        const Self = @This();
-        const Node = SinglyLinkedList.Node;
-
-        pub fn init(allocator: std.mem.Allocator) Self {
-            return .{ .allocator = allocator };
-        }
-
-        pub fn deinit(self: *Self) void {
-            while (self.pop()) |_| {}
-        }
-
-        fn createNode(self: Self, data: T) !*Node {
-            const node = try self.allocator.create(Node);
-            node.data = data;
-            return node;
-        }
-
-        pub fn prepend(self: *Self, data: T) !void {
-            const node = try self.createNode(data);
-
-            if (self.list.first == null)
-                self.last_node = node;
-
-            self.list.prepend(node);
-        }
-
-        pub fn append(self: *Self, data: T) !void {
-            if (self.last_node) |last| {
-                self.last_node = try self.createNode(data);
-                last.insertAfter(self.last_node.?);
-            } else {
-                try self.prepend(data);
-            }
-        }
-
-        pub fn peek(self: Self) ?T {
-            if (self.list.first) |first| {
-                return first.data;
-            } else {
-                return null;
-            }
-        }
-
-        pub fn pop(self: *Self) ?T {
-            if (self.list.popFirst()) |node| {
-                if (node == self.last_node)
-                    self.last_node = null;
-
-                defer self.allocator.destroy(node);
-                return node.data;
-            } else {
-                return null;
-            }
-        }
-    };
-}
-
-test {
-    const expectEql = std.testing.expectEqual;
-
-    var list = LinkedList(u8).init(std.testing.allocator);
-    defer list.deinit();
-
-    try list.append(2);
-    try list.append(4);
-    try list.append(8);
-    try list.append(16);
-
-    try expectEql(list.pop(), 2);
-    try expectEql(list.pop(), 4);
-    try expectEql(list.pop(), 8);
-    try expectEql(list.pop(), 16);
 }
