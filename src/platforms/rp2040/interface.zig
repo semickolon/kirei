@@ -18,19 +18,103 @@ const keymap align(4) = @embedFile("keymap.kirei").*;
 var engine: kirei.Engine = undefined;
 
 var umm: UmmAllocator = undefined;
-var umm_heap = std.mem.zeroes([32 * 1024]u8);
+var umm_heap = std.mem.zeroes([16 * 1024]u8);
 
 var d1 = common.CycleDebouncer(u7){};
 
 const kscan = common.Kscan(Gpio){
     .drivers = &.{
-        .{ .matrix = .{
-            .cols = &.{ Gpio.pin(.P2), Gpio.pin(.P3) },
-            .rows = &.{ Gpio.pin(.P4), Gpio.pin(.P5) },
-            .debouncer = &d1,
-        } },
+        .{
+            .matrix = .{
+                .cols = &.{ Gpio.pin(.P7), Gpio.pin(.P8), Gpio.pin(.P9), Gpio.pin(.P6), Gpio.pin(.P10), Gpio.pin(.P21), Gpio.pin(.P28), Gpio.pin(.P22), Gpio.pin(.P26), Gpio.pin(.P27) },
+                .rows = &.{ Gpio.pin(.P11), Gpio.pin(.P12), Gpio.pin(.P13), Gpio.pin(.P5), Gpio.pin(.P20), Gpio.pin(.P19), Gpio.pin(.P18), Gpio.pin(.P29) },
+                .debouncer = &d1,
+            },
+        },
     },
-    .key_mapping = &.{ 1, null, 2, 0 },
+    .key_mapping = &.{
+        0,
+        10,
+        20,
+        null,
+        null,
+        null,
+        null,
+        null,
+        1,
+        11,
+        21,
+        null,
+        null,
+        null,
+        null,
+        null,
+        2,
+        12,
+        22,
+        null,
+        null,
+        null,
+        null,
+        null,
+        3,
+        13,
+        23,
+        30,
+        null,
+        null,
+        null,
+        null,
+        4,
+        14,
+        24,
+        31,
+        null,
+        null,
+        null,
+        null,
+
+        null,
+        null,
+        null,
+        null,
+        5,
+        15,
+        25,
+        32,
+        null,
+        null,
+        null,
+        null,
+        6,
+        16,
+        26,
+        33,
+        null,
+        null,
+        null,
+        null,
+        7,
+        17,
+        27,
+        null,
+        null,
+        null,
+        null,
+        null,
+        8,
+        18,
+        28,
+        null,
+        null,
+        null,
+        null,
+        null,
+        9,
+        19,
+        29,
+        null,
+    },
     .engine = &engine,
 };
 
@@ -57,9 +141,12 @@ pub fn init() void {
     };
 }
 
+pub fn scan() void {
+    kscan.scan();
+}
+
 pub fn process() void {
     scheduler.process();
-    kscan.scan();
     engine.process();
 }
 
@@ -70,10 +157,6 @@ fn onReportPush(report: *const [8]u8) bool {
 
 pub fn callScheduled(token: kirei.ScheduleToken) void {
     engine.callScheduled(token);
-}
-
-pub fn pushKeyEvent(key_idx: kirei.KeyIndex, down: bool) void {
-    engine.pushKeyEvent(key_idx, down);
 }
 
 fn getKireiTimeMillis() kirei.TimeMillis {

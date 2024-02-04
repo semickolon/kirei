@@ -14,7 +14,6 @@ fn ScanIter(comptime Gpio: type) type {
         fn reportKeyState(self: *Self, down: ?bool) void {
             if (down) |d| {
                 if (self.kscan.getMappedKeyIndex(self.key_idx)) |key_idx| {
-                    std.log.debug("{}: {}", .{ key_idx, d });
                     self.kscan.engine.pushKeyEvent(key_idx, d);
                 }
             }
@@ -102,13 +101,18 @@ fn Matrix(comptime Gpio: type) type {
 
             for (outs) |out| {
                 out.write(true);
-                defer out.write(false);
+
+                for (0..128) |_| {
+                    asm volatile ("nop");
+                }
 
                 for (ins) |in| {
                     const down = self.debouncer.debounce(i, in.read());
                     scan_iter.reportKeyState(down);
                     i += 1;
                 }
+
+                out.write(false);
             }
         }
 
@@ -130,10 +134,10 @@ fn Matrix(comptime Gpio: type) type {
 
 pub fn CycleDebouncer(comptime Index: type) type {
     const key_count = std.math.maxInt(Index) + 1;
+    const BackingCounter = u2;
 
     return struct {
-        keys_pressed: std.StaticBitSet(key_count) = std.StaticBitSet(key_count).initEmpty(),
-        counters: std.PackedIntArray(u2, key_count) = std.PackedIntArray(u2, key_count).initAllTo(0),
+        counters: std.PackedIntArray(BackingCounter, key_count) = std.PackedIntArray(BackingCounter, key_count).initAllTo(0),
 
         const Self = @This();
 
@@ -145,23 +149,13 @@ pub fn CycleDebouncer(comptime Index: type) type {
             else
                 last_counter -| 1;
 
-            if (last_counter == counter)
-                return null;
-
             self.counters.set(idx, counter);
 
-            if (switch (counter) {
+            return switch (counter) {
                 0 => false,
-                std.math.maxInt(u2) => true,
+                std.math.maxInt(BackingCounter) => true,
                 else => null,
-            }) |is_down| {
-                if (self.keys_pressed.isSet(idx) != is_down) {
-                    self.keys_pressed.toggle(idx);
-                    return is_down;
-                }
-            }
-
-            return null;
+            };
         }
     };
 }

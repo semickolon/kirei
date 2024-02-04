@@ -17,7 +17,7 @@ pub const std_options = struct {
 };
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
-    std.log.err("panic: {s}", .{message});
+    std.log.err("PANIC: {s}", .{message});
     @breakpoint();
     while (true) {}
 }
@@ -42,14 +42,15 @@ pub fn main() !void {
     var new: u64 = 0;
 
     while (true) {
-        try usb.process();
-        interface.process();
-
         new = time.get_time_since_boot().to_us();
 
-        if (new - old > 500000) {
+        if (new - old >= 1000) {
             old = new;
             led.toggle();
+            interface.scan();
         }
+
+        interface.process();
+        try usb.process();
     }
 }

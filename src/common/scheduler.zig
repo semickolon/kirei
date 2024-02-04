@@ -40,7 +40,7 @@ pub fn SingleScheduler(
             self.tasks.insert(idx, .{
                 .time_millis = time_millis,
                 .token = token,
-            }) catch @panic("schedins");
+            }) catch unreachable;
 
             self.active_tokens.set(token);
 

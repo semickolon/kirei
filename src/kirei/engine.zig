@@ -71,11 +71,13 @@ pub const Engine = struct {
     ev_idx: u8 = 0,
     impl: Implementation,
     schedule_token_counter: ScheduleToken = 0,
+    keys_pressed: KeysPressed = KeysPressed.initEmpty(),
 
     const Self = @This();
 
     const KeyDefList = std.BoundedArray(KeyDef, 16);
     const EventList = std.BoundedArray(Event, 64);
+    const KeysPressed = std.StaticBitSet(std.math.maxInt(KeyIndex) + 1);
 
     pub fn init(impl: Implementation, keymap_bytes: []align(4) const u8) !Self {
         return Self{
@@ -250,10 +252,11 @@ pub const Engine = struct {
         } });
     }
 
-    // Caller must guarantee that all key events are "toggles"
-    // That is, caller must not report the same values of `down` consecutively (e.g. true->true, false->false)
-    // That would be undefined behavior
     pub fn pushKeyEvent(self: *Self, key_idx: KeyIndex, down: bool) void {
+        if (self.keys_pressed.isSet(key_idx) == down)
+            return;
+
+        self.keys_pressed.toggle(key_idx);
         self.pushEvent(.{ .key = .{
             .key_idx = key_idx,
             .down = down,
