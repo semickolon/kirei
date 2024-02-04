@@ -1,14 +1,8 @@
 const clocks = @import("hal/clocks.zig");
-const gpio = @import("hal/gpio.zig");
-const P = gpio.pins;
+const gpio = @import("gpio.zig");
 const TxPower = @import("ble/ble.zig").TxPower;
 
 pub const kscan = .{
-    .key_count = 9,
-    .matrix = .{
-        .cols = [_]gpio.Pin{ P.B10, P.B7, P.B4 },
-        .rows = [_]gpio.Pin{ P.A15, P.A5, P.A4 },
-    },
     .scan_interval = 2, // in 625us units
 };
 
@@ -18,7 +12,7 @@ const ble_max_connections = .{
 };
 
 pub const engine = .{
-    .mem_heap_size = 1024 * 12,
+    .mem_heap_size = 1024 * 8,
 };
 
 pub const ble = .{
@@ -38,5 +32,5 @@ pub const ble = .{
 
 pub const sys = .{
     .clock = clocks.SysClock.pll_60_mhz,
-    .led_1 = P.A8,
+    .led_1 = gpio.PinEnum.A8.pin(),
 };

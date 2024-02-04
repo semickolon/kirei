@@ -109,7 +109,7 @@ pub fn build(b: *std.Build) void {
         exe.addModule("uuid", uuid);
     }
 
-    if (platform == .testing) {
+    if (microzig_fw == null) {
         exe.addAnonymousModule("keymap", .{ .source_file = keymap_gen_run.captureStdOut() });
     }
 

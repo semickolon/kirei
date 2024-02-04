@@ -4,7 +4,6 @@ const ble = @import("ble/ble.zig");
 const ble_dev = @import("ble/ble_dev.zig");
 
 const config = @import("config.zig");
-const kscan = @import("kscan.zig");
 const interface = @import("interface.zig");
 
 const pmu = @import("hal/pmu.zig");
@@ -36,13 +35,11 @@ inline fn main() noreturn {
     };
 
     ble_dev.init();
-    kscan.init();
     interface.init();
 
     std.log.debug("init success!", .{});
 
     while (true) {
-        kscan.process();
         interface.process();
         ble.process();
     }

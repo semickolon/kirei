@@ -110,7 +110,6 @@ pub fn Matrix(comptime Gpio: type) type {
 
         fn setScanning(self: *Self, scanning: bool) void {
             self.scanning = scanning;
-            std.log.debug("scanning = {}", .{scanning});
 
             for (self.outputs()) |out| {
                 out.write(!scanning);

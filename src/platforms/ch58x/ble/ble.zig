@@ -13,7 +13,7 @@ const eeprom = @import("../hal/eeprom.zig");
 
 const n = @import("assigned_numbers.zig");
 
-var memBuf: [config.ble.mem_heap_size / 4]u32 align(4) = undefined;
+var memBuf align(4) = std.mem.zeroes([config.ble.mem_heap_size]u8);
 
 var ble_config: c.bleConfig_t = blk: {
     var cfg = std.mem.zeroes(c.bleConfig_t);

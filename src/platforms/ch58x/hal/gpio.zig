@@ -65,9 +65,11 @@ const Mode = enum {
     output_drv,
 };
 
+pub const PortId = enum(u1) { a, b };
+
 pub const Pin = packed struct {
     num: u5,
-    port_id: enum(u1) { a, b },
+    port_id: PortId,
 
     const Self = @This();
 
@@ -82,7 +84,7 @@ pub const Pin = packed struct {
         return self.port().registers;
     }
 
-    pub fn config(self: Self, comptime mode: Mode) void {
+    pub fn config(self: Self, mode: Mode) void {
         const is_output = switch (mode) {
             .output, .output_drv => true,
             .input, .input_pull_up, .input_pull_down => false,
