@@ -46,12 +46,15 @@ pub const Gpio = common.Gpio(PinEnum, impl);
 
 const GpioImplementation = common.GpioImplementation(PinEnum);
 const GpioDirection = common.GpioDirection;
+const GpioIrqLevel = common.GpioIrqLevel;
 
 const impl = GpioImplementation{
     .config = config,
     .read = read,
     .write = write,
     .toggle = toggle,
+    .setInterrupt = setInterrupt,
+    .takeInterruptTriggered = takeInterruptTriggered,
 };
 
 fn config(num: PinEnum, dir: GpioDirection) void {
@@ -72,4 +75,14 @@ fn write(num: PinEnum, value: bool) void {
 
 fn toggle(num: PinEnum) void {
     num.pin().toggle();
+}
+
+// TODO: We don't really care since RP2040 isn't wireless, but wouldn't hurt to actually implement this.
+fn setInterrupt(num: PinEnum, irq_level: ?GpioIrqLevel) void {
+    _ = num;
+    _ = irq_level;
+}
+
+fn takeInterruptTriggered(num: PinEnum) bool {
+    return read(num);
 }

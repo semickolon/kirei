@@ -20,18 +20,17 @@ var engine: kirei.Engine = undefined;
 var umm: UmmAllocator = undefined;
 var umm_heap = std.mem.zeroes([16 * 1024]u8);
 
-var d1 = common.CycleDebouncer(u7){};
-
-const kscan = common.Kscan(Gpio){
-    .drivers = &.{
-        .{
-            .matrix = .{
-                .cols = &.{ Gpio.pin(.P7), Gpio.pin(.P8), Gpio.pin(.P9), Gpio.pin(.P6), Gpio.pin(.P10), Gpio.pin(.P21), Gpio.pin(.P28), Gpio.pin(.P22), Gpio.pin(.P26), Gpio.pin(.P27) },
-                .rows = &.{ Gpio.pin(.P11), Gpio.pin(.P12), Gpio.pin(.P13), Gpio.pin(.P5), Gpio.pin(.P20), Gpio.pin(.P19), Gpio.pin(.P18), Gpio.pin(.P29) },
-                .debouncer = &d1,
-            },
+var drivers = [_]common.Driver(Gpio){
+    .{ .matrix = .{
+        .config = &.{
+            .cols = &.{ Gpio.pin(.P7), Gpio.pin(.P8), Gpio.pin(.P9), Gpio.pin(.P6), Gpio.pin(.P10), Gpio.pin(.P21), Gpio.pin(.P28), Gpio.pin(.P22), Gpio.pin(.P26), Gpio.pin(.P27) },
+            .rows = &.{ Gpio.pin(.P11), Gpio.pin(.P12), Gpio.pin(.P13), Gpio.pin(.P5), Gpio.pin(.P20), Gpio.pin(.P19), Gpio.pin(.P18), Gpio.pin(.P29) },
         },
-    },
+    } },
+};
+
+var kscan = common.Kscan(Gpio){
+    .drivers = &drivers,
     .key_mapping = &.{
         0,
         10,
@@ -142,7 +141,7 @@ pub fn init() void {
 }
 
 pub fn scan() void {
-    kscan.scan();
+    kscan.process();
 }
 
 pub fn process() void {
