@@ -78,8 +78,10 @@ pub fn pushKeyGroup(self: *OutputHid, key_group: KeyGroup, down: bool) void {
 
     switch (kc_info.kind) {
         .hid_keyboard_code => {
-            const report_codes: *[6]u8 = self.report[2..];
             const hid_code = kc_info.id;
+            if (hid_code < 4) return;
+
+            const report_codes: *[6]u8 = self.report[2..];
             var idx: ?usize = null;
 
             for (report_codes, 0..) |rc, i| {
@@ -125,5 +127,28 @@ pub fn sendReports(self: *OutputHid) void {
     if (self.is_report_dirty) {
         if (self.impl.onReportPush(&self.report))
             self.is_report_dirty = false;
+    }
+}
+
+pub fn isPressed(self: OutputHid, key_code: KeyCode) bool {
+    const kc_info = keymap.keyCodeInfo(key_code);
+
+    switch (kc_info.kind) {
+        .hid_keyboard_code => {
+            for (self.report[2..]) |hid_code| {
+                if (kc_info.id == hid_code)
+                    return true;
+            }
+            return false;
+        },
+        .hid_keyboard_modifier => {
+            const mod_idx: u3 = @truncate(kc_info.id);
+            return (self.report[0] & (@as(u8, 1) << mod_idx)) != 0;
+        },
+        .kirei_state_a => {
+            const idx: u5 = @truncate(kc_info.id);
+            return self.state_a.isSet(idx);
+        },
+        .reserved => return false,
     }
 }

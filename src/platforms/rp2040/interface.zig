@@ -13,35 +13,36 @@ const Gpio = @import("gpio.zig").Gpio;
 const UmmAllocator = @import("umm").UmmAllocator(.{});
 
 const keymap: kirei.KeyMap = &.{
-    .{ .key_press = .{ .key_group = .{ .key_code = 4 } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 4 } } } },
     .{
-        .key_press = .{
-            .key_group = .{
-                .key_code = 5,
-                .mods = .{
-                    .shift = .{
-                        .side = .both,
-                        .props = .{ .anti = true, .retention = .weak },
+        .literal = .{
+            .key_press = .{
+                .key_group = .{
+                    .key_code = 5,
+                    .mods = .{
+                        .shift = .{ .side = .both, .props = .{ .anti = true, .retention = .weak } },
                     },
                 },
             },
         },
     },
     .{
-        .key_press = .{
-            .key_group = .{
-                // .key_code = 5,
-                .mods = .{
-                    .shift = .{
-                        .side = .both,
-                        .props = .{ .retention = .normal },
+        .literal = .{
+            .key_press = .{
+                .key_group = .{
+                    // .key_code = 5,
+                    .mods = .{
+                        .shift = .{
+                            .side = .both,
+                            .props = .{ .retention = .normal },
+                        },
                     },
                 },
             },
         },
     },
-    .{ .key_press = .{ .key_group = .{ .key_code = 8 } } },
-    .{
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 8 } } } },
+    .{ .literal = .{
         .key_press = .{
             .key_group = .{
                 .key_code = 0x1E,
@@ -53,41 +54,100 @@ const keymap: kirei.KeyMap = &.{
                 },
             },
         },
+    } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 0 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 10 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 11 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 12 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 13 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 0xE8 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 0x107 } } } },
+    // .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 16 } } } },
+    .{
+        .swt = .{
+            .branches = &.{
+                .{
+                    .condition = .{ .logical_and = &.{
+                        .{ .query = .{ .is_pressed = 0x04 } },
+                        .{ .query = .{ .is_pressed = 0xE8 } },
+                        .{ .query = .{ .is_pressed = 0xE1 } },
+                    } },
+                    .value = .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 19 } } } },
+                },
+                .{
+                    .condition = .{ .query = .{ .is_pressed = 0xE8 } },
+                    .value = .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 18 } } } },
+                },
+                .{
+                    .condition = .{ .query = .{ .is_pressed = 0x04 } },
+                    .value = .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 17 } } } },
+                },
+            },
+            .fallback = .{ .key_press = .{ .key_group = .{ .key_code = 16 } } },
+        },
     },
-    .{ .key_press = .{ .key_group = .{ .key_code = 0 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 10 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 11 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 12 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 13 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 0xE8 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 0x107 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 16 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 17 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 18 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 19 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 20 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 21 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 22 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 23 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 24 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 25 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 26 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 27 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 28 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 29 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 4 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 4 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 4 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 4 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 20 } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 17 } } } },
+    .{
+        .swt = .{
+            .branches = &.{
+                .{
+                    .condition = .{ .logical_or = &.{
+                        .{ .query = .{ .is_pressed = 0xE1 } },
+                        .{ .query = .{ .is_pressed = 0xE5 } },
+                    } },
+                    .value = .{
+                        .literal = .{ .key_press = .{
+                            .key_group = .{
+                                .key_code = 0x21,
+                                .mods = .{
+                                    .shift = .{
+                                        .side = .both,
+                                        .props = .{ .retention = .weak, .anti = true },
+                                    },
+                                },
+                            },
+                        } },
+                    },
+                },
+            },
+            .fallback = .{ .key_press = .{
+                .key_group = .{
+                    .key_code = 0x21,
+                    .mods = .{
+                        .shift = .{
+                            .side = .left,
+                            .props = .{ .retention = .weak },
+                        },
+                    },
+                },
+            } },
+        },
+    },
+    // .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 18 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 19 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 20 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 21 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 22 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 23 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 24 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 25 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 26 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 27 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 28 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 29 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 4 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 4 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 4 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 4 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 20 } } } },
     // .{ .key_press = .{ .key_group = .{ .key_code = 21 } } },
-    .{ .hold_tap = .{
+    .{ .literal = .{ .hold_tap = .{
         .tap_key_def = &.{ .key_press = .{ .key_group = .{ .key_code = 4 } } },
         .hold_key_def = &.{ .key_press = .{ .key_group = .{ .key_code = 5 } } },
         .timeout_ms = 1000,
-    } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 22 } } },
-    .{ .key_press = .{ .key_group = .{ .key_code = 23 } } },
+    } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 22 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 23 } } } },
 };
 
 var engine: kirei.Engine = undefined;

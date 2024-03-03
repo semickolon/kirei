@@ -48,7 +48,7 @@ pub const Engine = struct {
     keys_pressed: KeysPressed = KeysPressed.initEmpty(),
     schedule_token_counter: ScheduleToken = 0,
     output_hid: OutputHid,
-    key_defs: [KEY_COUNT]?*const KeyDef,
+    key_defs: [KEY_COUNT]?KeyDef,
     sync_key_idx: ?KeyIndex = null,
     events: EventList,
     ev_idx: u8 = 0,
@@ -63,7 +63,7 @@ pub const Engine = struct {
             .impl = impl,
             .key_map = key_map,
             .output_hid = OutputHid.init(impl),
-            .key_defs = [_]?*const KeyDef{null} ** KEY_COUNT,
+            .key_defs = [_]?KeyDef{null} ** KEY_COUNT,
             .events = EventList.init(0) catch unreachable,
         };
     }
@@ -80,7 +80,7 @@ pub const Engine = struct {
         }) catch @panic("Engine event overflow - push");
     }
 
-    fn setKeyDef(self: *Self, key_idx: KeyIndex, key_def: ?*const KeyDef) void {
+    fn setKeyDef(self: *Self, key_idx: KeyIndex, key_def: ?KeyDef) void {
         if (key_def != null and key_def.?.getType() == .sync) {
             if (self.sync_key_idx) |i| {
                 // If we're setting a new sync KeyDef while there's currently one, it must be the same key index.
@@ -140,7 +140,8 @@ pub const Engine = struct {
 
             switch (ev.data) {
                 .key => |k| if (k.down) {
-                    self.setKeyDef(k.key_idx, &self.key_map[k.key_idx]);
+                    const key_def = self.key_map[k.key_idx].resolve(self);
+                    self.setKeyDef(k.key_idx, key_def);
                     continue :blk_ev;
                 },
                 .time => {},
