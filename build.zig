@@ -106,9 +106,9 @@ pub fn build(b: *std.Build) void {
         exe.addModule("uuid", uuid);
     }
 
-    if (microzig_fw == null) {
-        exe.addAnonymousModule("keymap", .{ .source_file = keymap_gen_run.captureStdOut() });
-    }
+    // if (microzig_fw == null) {
+    //     exe.addAnonymousModule("keymap", .{ .source_file = keymap_gen_run.captureStdOut() });
+    // }
 
     if (platform == .ch58x) {
         const link_file_path = "src/platforms/ch58x/link.ld";

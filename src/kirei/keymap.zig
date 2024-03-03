@@ -131,13 +131,13 @@ pub const KeyToggleBehavior = struct {
     key_group: KeyGroup,
 
     pub fn process(self: KeyToggleBehavior, engine: *Engine, down: bool) bool {
-        _ = down;
-        _ = engine;
-        _ = self;
+        if (down) {
+            engine.output_hid.pushKeyGroup(
+                self.key_group,
+                !engine.output_hid.isPressed(self.key_group.key_code),
+            );
+        }
         return true;
-        // TODO: Method for checking if key is pressed
-        // if (down)
-        //     engine.handleKeycode(self.key_code.key_code, down);
     }
 };
 

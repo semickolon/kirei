@@ -1,4 +1,5 @@
 const Engine = @import("engine.zig").Engine;
+const KeyIndex = @import("engine.zig").KeyIndex;
 const KeyCode = @import("keymap.zig").KeyCode;
 
 pub fn Expression(comptime T: type) type {
@@ -14,6 +15,21 @@ pub fn Expression(comptime T: type) type {
                 .swt => |swt| swt.resolve(engine),
             };
         }
+
+        pub fn resolveFn(comptime self: Self) @TypeOf(&Comptime(self).resolve) {
+            return &Comptime(self).resolve;
+        }
+
+        fn Comptime(comptime self: Self) type {
+            return struct {
+                fn resolve(engine: *const Engine) T {
+                    return switch (self) {
+                        .literal => |v| v,
+                        .swt => |swt| (comptime swt.resolveFn())(engine),
+                    };
+                }
+            };
+        }
     };
 }
 
@@ -24,7 +40,7 @@ pub fn Switch(comptime T: type) type {
 
         const Self = @This();
 
-        const Branch = struct {
+        pub const Branch = struct {
             condition: Condition,
             value: Expression(T),
         };
@@ -35,6 +51,22 @@ pub fn Switch(comptime T: type) type {
                     return branch.value.resolve(engine);
             }
             return self.fallback;
+        }
+
+        pub fn resolveFn(comptime self: Self) @TypeOf(&Comptime(self).resolve) {
+            return &Comptime(self).resolve;
+        }
+
+        fn Comptime(comptime self: Self) type {
+            return struct {
+                fn resolve(engine: *const Engine) T {
+                    inline for (self.branches) |branch| {
+                        if ((comptime branch.condition.resolveFn())(engine))
+                            return (comptime branch.value.resolveFn())(engine);
+                    }
+                    return self.fallback;
+                }
+            };
         }
     };
 }
@@ -71,16 +103,65 @@ pub const Condition = union(enum) {
             },
         }
     }
+
+    pub fn resolveFn(comptime self: Condition) @TypeOf(&Comptime(self).resolve) {
+        return &Comptime(self).resolve;
+    }
+
+    fn Comptime(comptime self: Condition) type {
+        return struct {
+            fn resolve(engine: *const Engine) bool {
+                switch (self) {
+                    .literal => |b| return b,
+                    .query => |query| {
+                        return (comptime query.resolveFn())(engine);
+                    },
+                    .logical_not => |cond| {
+                        return !(comptime cond.resolveFn())(engine);
+                    },
+                    .logical_and => |conditions| {
+                        inline for (conditions) |cond| {
+                            if (!(comptime cond.resolveFn())(engine))
+                                return false;
+                        }
+                        return true;
+                    },
+                    .logical_or => |conditions| {
+                        inline for (conditions) |cond| {
+                            if ((comptime cond.resolveFn())(engine))
+                                return true;
+                        }
+                        return false;
+                    },
+                }
+            }
+        };
+    }
 };
 
 pub const Query = union(enum) {
     is_pressed: KeyCode,
+    is_key_pressed: KeyIndex,
 
     pub fn resolve(self: Query, engine: *const Engine) bool {
         switch (self) {
-            .is_pressed => |key_code| {
-                return engine.output_hid.isPressed(key_code);
-            },
+            .is_pressed => |key_code| return engine.output_hid.isPressed(key_code),
+            .is_key_pressed => |key_idx| return engine.isKeyPressed(key_idx),
         }
+    }
+
+    pub fn resolveFn(comptime self: Query) @TypeOf(&Comptime(self).resolve) {
+        return &Comptime(self).resolve;
+    }
+
+    fn Comptime(comptime self: Query) type {
+        return struct {
+            fn resolve(engine: *const Engine) bool {
+                switch (self) {
+                    .is_pressed => |key_code| return engine.output_hid.isPressed(key_code),
+                    .is_key_pressed => |key_idx| return engine.isKeyPressed(key_idx),
+                }
+            }
+        };
     }
 };

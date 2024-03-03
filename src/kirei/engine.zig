@@ -12,6 +12,161 @@ pub const KeyIndex = u8;
 pub const TimeMillis = u16;
 pub const ScheduleToken = u8;
 
+const compiled_key_map = true;
+
+pub const KM: KeyMap = &.{
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 4 } } } },
+    .{
+        .literal = .{
+            .key_press = .{
+                .key_group = .{
+                    .key_code = 5,
+                    .mods = .{
+                        .shift = .{ .side = .both, .props = .{ .anti = true, .retention = .weak } },
+                    },
+                },
+            },
+        },
+    },
+    .{
+        .literal = .{
+            .key_press = .{
+                .key_group = .{
+                    // .key_code = 5,
+                    .mods = .{
+                        .shift = .{
+                            .side = .both,
+                            .props = .{ .retention = .normal },
+                        },
+                    },
+                },
+            },
+        },
+    },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 8 } } } },
+    .{ .literal = .{
+        .key_press = .{
+            .key_group = .{
+                .key_code = 0x1E,
+                .mods = .{
+                    .shift = .{
+                        .side = .left,
+                        .props = .{ .retention = .weak },
+                    },
+                },
+            },
+        },
+    } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 0 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 10 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 11 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 12 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 13 } } } },
+    .{ .literal = .{ .key_toggle = .{ .key_group = .{ .key_code = 0xE8 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 0x107 } } } },
+    // .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 16 } } } },
+    .{
+        .swt = .{
+            .branches = &.{
+                .{
+                    .condition = .{ .logical_and = &.{
+                        .{ .query = .{ .is_pressed = 0x04 } },
+                        .{ .query = .{ .is_pressed = 0xE8 } },
+                        .{ .query = .{ .is_pressed = 0xE1 } },
+                    } },
+                    .value = .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 19 } } } },
+                },
+                .{
+                    .condition = .{ .query = .{ .is_pressed = 0xE8 } },
+                    .value = .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 18 } } } },
+                },
+                .{
+                    .condition = .{ .query = .{ .is_pressed = 0x04 } },
+                    .value = .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 17 } } } },
+                },
+            },
+            .fallback = .{ .key_press = .{ .key_group = .{ .key_code = 16 } } },
+        },
+    },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 17 } } } },
+    .{
+        .swt = .{
+            .branches = &.{
+                .{
+                    .condition = .{ .logical_or = &.{
+                        .{ .query = .{ .is_pressed = 0xE1 } },
+                        .{ .query = .{ .is_pressed = 0xE5 } },
+                    } },
+                    .value = .{
+                        .literal = .{ .key_press = .{
+                            .key_group = .{
+                                .key_code = 0x21,
+                                .mods = .{
+                                    .shift = .{
+                                        .side = .both,
+                                        .props = .{ .retention = .weak, .anti = true },
+                                    },
+                                },
+                            },
+                        } },
+                    },
+                },
+            },
+            .fallback = .{ .key_press = .{
+                .key_group = .{
+                    .key_code = 0x21,
+                    .mods = .{
+                        .shift = .{
+                            .side = .left,
+                            .props = .{ .retention = .weak },
+                        },
+                    },
+                },
+            } },
+        },
+    },
+    // .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 18 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 19 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 20 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 21 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 22 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 23 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 24 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 25 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 26 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 27 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 28 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 29 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 4 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 4 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 4 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 4 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 20 } } } },
+    // .{ .key_press = .{ .key_group = .{ .key_code = 21 } } },
+    .{ .literal = .{ .hold_tap = .{
+        .tap_key_def = &.{ .key_press = .{ .key_group = .{ .key_code = 4 } } },
+        .hold_key_def = &.{ .key_press = .{ .key_group = .{ .key_code = 5 } } },
+        .timeout_ms = 1000,
+    } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 22 } } } },
+    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 23 } } } },
+};
+
+fn resolveKeyDef(key_idx: KeyIndex, engine: *const Engine) KeyDef {
+    if (compiled_key_map) {
+        std.debug.assert(KM.len <= std.math.maxInt(KeyIndex) + 1);
+
+        inline for (KM, 0..) |expr, i| {
+            if (key_idx == i) {
+                return (comptime expr.resolveFn())(engine);
+            }
+        }
+        unreachable;
+    } else {
+        return engine.key_map[key_idx].resolve(engine);
+    }
+}
+
 const KEY_COUNT = 34; // TODO
 
 pub const KeyEvent = struct {
@@ -44,7 +199,7 @@ pub const Implementation = struct {
 
 pub const Engine = struct {
     impl: Implementation,
-    key_map: KeyMap,
+    key_map: if (compiled_key_map) void else KeyMap,
     keys_pressed: KeysPressed = KeysPressed.initEmpty(),
     schedule_token_counter: ScheduleToken = 0,
     output_hid: OutputHid,
@@ -56,12 +211,12 @@ pub const Engine = struct {
     const Self = @This();
 
     const EventList = std.BoundedArray(Event, 64);
-    const KeysPressed = std.StaticBitSet(std.math.maxInt(KeyIndex) + 1);
+    const KeysPressed = std.StaticBitSet(KEY_COUNT);
 
     pub fn init(impl: Implementation, key_map: KeyMap) !Self {
         return Self{
             .impl = impl,
-            .key_map = key_map,
+            .key_map = if (compiled_key_map) {} else key_map,
             .output_hid = OutputHid.init(impl),
             .key_defs = [_]?KeyDef{null} ** KEY_COUNT,
             .events = EventList.init(0) catch unreachable,
@@ -140,7 +295,7 @@ pub const Engine = struct {
 
             switch (ev.data) {
                 .key => |k| if (k.down) {
-                    const key_def = self.key_map[k.key_idx].resolve(self);
+                    const key_def = resolveKeyDef(k.key_idx, self);
                     self.setKeyDef(k.key_idx, key_def);
                     continue :blk_ev;
                 },
@@ -194,7 +349,7 @@ pub const Engine = struct {
     }
 
     pub fn pushKeyEvent(self: *Self, key_idx: KeyIndex, down: bool) void {
-        if (self.keys_pressed.isSet(key_idx) == down)
+        if (self.isKeyPressed(key_idx) == down)
             return;
 
         self.keys_pressed.toggle(key_idx);
@@ -202,5 +357,9 @@ pub const Engine = struct {
             .key_idx = key_idx,
             .down = down,
         } });
+    }
+
+    pub fn isKeyPressed(self: Self, key_idx: KeyIndex) bool {
+        return self.keys_pressed.isSet(key_idx);
     }
 };

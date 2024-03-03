@@ -15,8 +15,6 @@ const UmmAllocator = @import("umm").UmmAllocator(.{});
 const Gpio = @import("gpio.zig").Gpio;
 const Duration = @import("duration.zig").Duration;
 
-const keymap align(4) = @embedFile("keymap").*;
-
 var engine: kirei.Engine = undefined;
 
 var umm: UmmAllocator = undefined;
@@ -51,10 +49,6 @@ pub fn init() void {
 
     kscan.setup();
 
-    // loadKeymapFromEeprom() catch {
-    //     std.log.err("load keymap failed", .{});
-    // };
-
     engine = kirei.Engine.init(
         .{
             .allocator = umm.allocator(),
@@ -63,29 +57,13 @@ pub fn init() void {
             .scheduleCall = scheduler.enqueue,
             .cancelCall = scheduler.cancel,
         },
-        &keymap,
+        &.{},
     ) catch |e| {
         std.log.err("engine init failed: {any}", .{e});
         return;
     };
 
     scheduleNextScan();
-}
-
-fn loadKeymapFromEeprom() !void {
-    var block: [256]u8 align(4) = undefined;
-    var byte_offset: usize = 0;
-
-    while (byte_offset < keymap.len) : (byte_offset +|= block.len) {
-        const block_len = @min(keymap.len - byte_offset, block.len);
-        const block_slice = block[0..block_len];
-
-        try eeprom.read(@truncate(byte_offset), block_slice);
-        // @memcpy(keymap[byte_offset .. byte_offset + block_len], block_slice);
-        // TODO: Fix. This is unreliable. Verification fails.
-        try flash.write(&keymap[byte_offset], block_slice);
-        try flash.verify(&keymap[byte_offset], block_slice);
-    }
 }
 
 fn scan() void {

@@ -44,7 +44,6 @@ pub fn pushKeyGroup(self: *OutputHid, key_group: KeyGroup, down: bool) void {
     if ((self.weak_mods | self.weak_anti_mods) != 0 and down and key_code != 0) {
         self.weak_mods = 0;
         self.weak_anti_mods = 0;
-        std.log.debug("cleared weak mods", .{});
     }
 
     const kc_normal_mods = key_group.modsAsByte(.normal, false);
@@ -106,8 +105,6 @@ pub fn pushKeyGroup(self: *OutputHid, key_group: KeyGroup, down: bool) void {
             } else {
                 self.state_a.unset(idx);
             }
-
-            std.log.debug("🐎 {any}", .{self.state_a.mask});
         },
         .hid_keyboard_modifier, .reserved => {},
     }
