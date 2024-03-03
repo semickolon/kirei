@@ -42,7 +42,7 @@ pub fn Switch(comptime T: type) type {
 pub const Condition = union(enum) {
     literal: bool,
     query: Query,
-    // logical_not: Condition,
+    logical_not: *const Condition,
     logical_and: []const Condition,
     logical_or: []const Condition,
 
@@ -52,9 +52,9 @@ pub const Condition = union(enum) {
             .query => |query| {
                 return query.resolve(engine);
             },
-            // .logical_not => |cond| {
-            //     return !cond.resolve(engine);
-            // },
+            .logical_not => |cond| {
+                return !cond.resolve(engine);
+            },
             .logical_and => |conditions| {
                 for (conditions) |cond| {
                     if (!cond.resolve(engine))
