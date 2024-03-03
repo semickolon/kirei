@@ -7,15 +7,17 @@ const ScheduleToken = eng.ScheduleToken;
 const Event = eng.Event;
 const Implementation = eng.Implementation;
 
-pub const KeyCode = packed struct(u32) {
+pub const KeyCode = u12;
+
+pub const KeyGroup = packed struct(u32) {
     mods: packed struct(u16) {
         ctrl: Modifier = .{},
         shift: Modifier = .{},
         alt: Modifier = .{},
         gui: Modifier = .{},
     } = .{},
-    hid_code: u8 = 0,
-    __padding: u8 = 0,
+    key_code: KeyCode = 0,
+    __padding: u4 = 0,
 
     pub const Modifier = packed struct(u4) {
         side: enum(u2) { none, left, right, both } = .none,
@@ -29,7 +31,7 @@ pub const KeyCode = packed struct(u32) {
 
     const Retention = enum(u1) { normal, weak };
 
-    pub fn modsAsByte(self: KeyCode, retention: Retention, anti: bool) u8 {
+    pub fn modsAsByte(self: KeyGroup, retention: Retention, anti: bool) u8 {
         var byte: u8 = 0;
 
         inline for (.{ self.mods.ctrl, self.mods.shift, self.mods.alt, self.mods.gui }, 0..) |mod, i| {
@@ -84,16 +86,16 @@ pub const KeyDef = union(enum) {
 };
 
 pub const KeyPressBehavior = struct {
-    key_code: KeyCode,
+    key_group: KeyGroup,
 
     pub fn process(self: KeyPressBehavior, engine: *Engine, down: bool) bool {
-        engine.handleKeycode(self.key_code, down);
+        engine.output_hid.pushHidEvent(self.key_group, down);
         return !down;
     }
 };
 
 pub const KeyToggleBehavior = struct {
-    key_code: KeyCode,
+    key_group: KeyGroup,
 
     pub fn process(self: KeyToggleBehavior, engine: *Engine, down: bool) bool {
         _ = down;
@@ -102,7 +104,7 @@ pub const KeyToggleBehavior = struct {
         return true;
         // TODO: Method for checking if key is pressed
         // if (down)
-        //     engine.handleKeycode(self.key_code.hid_code, down);
+        //     engine.handleKeycode(self.key_code.key_code, down);
     }
 };
 

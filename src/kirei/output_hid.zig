@@ -1,7 +1,9 @@
 const std = @import("std");
 const engine = @import("engine.zig");
+const keymap = @import("keymap.zig");
 
-const KeyCode = @import("keymap.zig").KeyCode;
+const KeyGroup = keymap.KeyGroup;
+const KeyCode = keymap.KeyCode;
 
 const OutputHid = @This();
 
@@ -24,29 +26,29 @@ pub fn init(impl: engine.Implementation) OutputHid {
     return .{ .impl = impl };
 }
 
-pub fn pushHidEvent(self: *OutputHid, key_code: KeyCode, down: bool) void {
+pub fn pushHidEvent(self: *OutputHid, key_group: KeyGroup, down: bool) void {
     if (self.is_report_dirty) {
         self.report_queue.append(self.report) catch @panic("OutputHid report queue overflow.");
         self.is_report_dirty = false;
     }
 
-    const hid_code: u8 = key_code.hid_code;
+    const key_code = key_group.key_code;
 
     // Mods
     const report_mods = &self.report[0];
 
-    // TODO: `hid_code != 0` doesn't necessarily guarantee lack of change in HID code.
+    // TODO: `key_code != 0` doesn't necessarily guarantee lack of change in HID code.
     // For example, pressing A then A on another key.
-    if ((self.weak_mods | self.weak_anti_mods) != 0 and down and hid_code != 0) {
+    if ((self.weak_mods | self.weak_anti_mods) != 0 and down and key_code != 0) {
         self.weak_mods = 0;
         self.weak_anti_mods = 0;
         std.log.debug("cleared weak mods", .{});
     }
 
-    const kc_normal_mods = key_code.modsAsByte(.normal, false);
-    const kc_weak_mods = key_code.modsAsByte(.weak, false);
-    const kc_normal_anti_mods = key_code.modsAsByte(.normal, true);
-    const kc_weak_anti_mods = key_code.modsAsByte(.weak, true);
+    const kc_normal_mods = key_group.modsAsByte(.normal, false);
+    const kc_weak_mods = key_group.modsAsByte(.weak, false);
+    const kc_normal_anti_mods = key_group.modsAsByte(.normal, true);
+    const kc_weak_anti_mods = key_group.modsAsByte(.weak, true);
 
     if (down) {
         self.weak_mods |= kc_weak_mods;
@@ -72,7 +74,8 @@ pub fn pushHidEvent(self: *OutputHid, key_code: KeyCode, down: bool) void {
     // Code
     const report_codes: *[6]u8 = self.report[2..];
 
-    if (hid_code < 0xE0) {
+    if (key_code < 0xE0) {
+        const hid_code: u8 = @truncate(key_code);
         var idx: ?usize = null;
 
         for (report_codes, 0..) |rc, i| {

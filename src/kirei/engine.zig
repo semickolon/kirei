@@ -5,6 +5,7 @@ const OutputHid = @import("output_hid.zig");
 const keymap = @import("keymap.zig");
 pub const KeyMap = keymap.KeyMap;
 pub const KeyDef = keymap.KeyDef;
+pub const KeyGroup = keymap.KeyGroup;
 pub const KeyCode = keymap.KeyCode;
 
 pub const KeyIndex = u8;
@@ -147,10 +148,6 @@ pub const Engine = struct {
 
             _ = self.events.orderedRemove(self.ev_idx);
         }
-    }
-
-    pub fn handleKeycode(self: *Self, key_code: KeyCode, down: bool) void {
-        self.output_hid.pushHidEvent(key_code, down);
     }
 
     pub fn scheduleTimeEvent(self: *Self, time: TimeMillis) ScheduleToken {
