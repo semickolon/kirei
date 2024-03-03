@@ -9,6 +9,38 @@ const Implementation = eng.Implementation;
 
 pub const KeyCode = u12;
 
+const KeyCodeInfo = struct {
+    kind: Kind,
+    id: u8,
+
+    const Kind = enum {
+        hid_keyboard_code, // 0x04 - 0xDF
+        hid_keyboard_modifier, // 0xE0 - 0xE7
+        kirei_state_a, // 0xE8 - 0x107
+        reserved,
+    };
+};
+
+pub fn keyCodeInfo(key_code: KeyCode) KeyCodeInfo {
+    const ranges = .{
+        .{ 0x04, 0xDF, KeyCodeInfo.Kind.hid_keyboard_code },
+        .{ 0xE0, 0xE7, KeyCodeInfo.Kind.hid_keyboard_modifier },
+        .{ 0xE8, 0x107, KeyCodeInfo.Kind.kirei_state_a },
+    };
+
+    inline for (ranges) |range| {
+        if (key_code >= range[0] and key_code <= range[1]) {
+            std.debug.assert((range[1] - range[0]) < 256);
+            return .{
+                .kind = range[2],
+                .id = @truncate(key_code - range[0]),
+            };
+        }
+    }
+
+    return .{ .kind = .reserved, .id = 0 };
+}
+
 pub const KeyGroup = packed struct(u32) {
     mods: packed struct(u16) {
         ctrl: Modifier = .{},
@@ -89,7 +121,7 @@ pub const KeyPressBehavior = struct {
     key_group: KeyGroup,
 
     pub fn process(self: KeyPressBehavior, engine: *Engine, down: bool) bool {
-        engine.output_hid.pushHidEvent(self.key_group, down);
+        engine.output_hid.pushKeyGroup(self.key_group, down);
         return !down;
     }
 };

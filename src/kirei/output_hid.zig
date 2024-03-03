@@ -22,11 +22,13 @@ weak_mods: u8 = 0,
 normal_anti_mods: u8 = 0,
 weak_anti_mods: u8 = 0,
 
+state_a: std.StaticBitSet(32) = std.StaticBitSet(32).initEmpty(),
+
 pub fn init(impl: engine.Implementation) OutputHid {
     return .{ .impl = impl };
 }
 
-pub fn pushHidEvent(self: *OutputHid, key_group: KeyGroup, down: bool) void {
+pub fn pushKeyGroup(self: *OutputHid, key_group: KeyGroup, down: bool) void {
     if (self.is_report_dirty) {
         self.report_queue.append(self.report) catch @panic("OutputHid report queue overflow.");
         self.is_report_dirty = false;
@@ -37,8 +39,8 @@ pub fn pushHidEvent(self: *OutputHid, key_group: KeyGroup, down: bool) void {
     // Mods
     const report_mods = &self.report[0];
 
-    // TODO: `key_code != 0` doesn't necessarily guarantee lack of change in HID code.
-    // For example, pressing A then A on another key.
+    // TODO: `key_code != 0` doesn't necessarily guarantee lack of change in reported HID codes.
+    // For example, pressing A then A on another key, or pressing a Kirei-space key.
     if ((self.weak_mods | self.weak_anti_mods) != 0 and down and key_code != 0) {
         self.weak_mods = 0;
         self.weak_anti_mods = 0;
@@ -72,25 +74,40 @@ pub fn pushHidEvent(self: *OutputHid, key_group: KeyGroup, down: bool) void {
     }
 
     // Code
-    const report_codes: *[6]u8 = self.report[2..];
+    const kc_info = keymap.keyCodeInfo(key_code);
 
-    if (key_code < 0xE0) {
-        const hid_code: u8 = @truncate(key_code);
-        var idx: ?usize = null;
+    switch (kc_info.kind) {
+        .hid_keyboard_code => {
+            const report_codes: *[6]u8 = self.report[2..];
+            const hid_code = kc_info.id;
+            var idx: ?usize = null;
 
-        for (report_codes, 0..) |rc, i| {
-            if ((down and (rc == 0 or rc == hid_code)) or (!down and rc == hid_code)) {
-                idx = i;
-                break;
+            for (report_codes, 0..) |rc, i| {
+                if ((down and (rc == 0 or rc == hid_code)) or (!down and rc == hid_code)) {
+                    idx = i;
+                    break;
+                }
             }
-        }
 
-        if (idx) |i| {
-            report_codes[i] = if (down) hid_code else 0;
-            self.is_report_dirty = true;
-        } else if (down) {
-            @panic("Unhandled case: No more HID report space."); // TODO
-        }
+            if (idx) |i| {
+                report_codes[i] = if (down) hid_code else 0;
+                self.is_report_dirty = true;
+            } else if (down) {
+                @panic("Unhandled case: No more HID report space."); // TODO
+            }
+        },
+        .kirei_state_a => {
+            const idx: u5 = @truncate(kc_info.id);
+
+            if (down) {
+                self.state_a.set(idx);
+            } else {
+                self.state_a.unset(idx);
+            }
+
+            std.log.debug("🐎 {any}", .{self.state_a.mask});
+        },
+        .hid_keyboard_modifier, .reserved => {},
     }
 }
 
