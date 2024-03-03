@@ -32,13 +32,6 @@ pub const Event = struct {
     };
 };
 
-pub const ProcessResult = union(enum) {
-    pass: void,
-    block: void,
-    complete: void,
-    transform: KeyDef,
-};
-
 pub const Implementation = struct {
     allocator: std.mem.Allocator,
 

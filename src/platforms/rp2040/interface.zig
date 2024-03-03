@@ -14,10 +14,46 @@ const UmmAllocator = @import("umm").UmmAllocator(.{});
 
 const keymap: kirei.KeyMap = &.{
     .{ .key_press = .{ .key_code = .{ .hid_code = 4 } } },
-    .{ .key_press = .{ .key_code = .{ .hid_code = 5 } } },
-    .{ .key_press = .{ .key_code = .{ .hid_code = 6 } } },
-    .{ .key_press = .{ .key_code = .{ .hid_code = 7 } } },
+    .{
+        .key_press = .{
+            .key_code = .{
+                .hid_code = 5,
+                .mods = .{
+                    .shift = .{
+                        .side = .both,
+                        .props = .{ .anti = true, .retention = .weak },
+                    },
+                },
+            },
+        },
+    },
+    .{
+        .key_press = .{
+            .key_code = .{
+                // .hid_code = 5,
+                .mods = .{
+                    .shift = .{
+                        .side = .both,
+                        .props = .{ .retention = .normal },
+                    },
+                },
+            },
+        },
+    },
     .{ .key_press = .{ .key_code = .{ .hid_code = 8 } } },
+    .{
+        .key_press = .{
+            .key_code = .{
+                .hid_code = 0x1E,
+                .mods = .{
+                    .shift = .{
+                        .side = .left,
+                        .props = .{ .retention = .weak },
+                    },
+                },
+            },
+        },
+    },
     .{ .key_press = .{ .key_code = .{ .hid_code = 9 } } },
     .{ .key_press = .{ .key_code = .{ .hid_code = 10 } } },
     .{ .key_press = .{ .key_code = .{ .hid_code = 11 } } },

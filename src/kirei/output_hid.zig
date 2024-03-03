@@ -7,8 +7,6 @@ const OutputHid = @This();
 
 pub const HidReport = [8]u8;
 
-const HidReportMods = std.bit_set.IntegerBitSet(8);
-const HidReportCodes = [6]u8;
 // TODO: Likely better if this is a static ring buffer
 const ReportQueue = std.BoundedArray(HidReport, 32);
 
@@ -16,6 +14,11 @@ report: HidReport = std.mem.zeroes(HidReport),
 report_queue: ReportQueue = ReportQueue.init(0) catch unreachable,
 is_report_dirty: bool = false,
 impl: engine.Implementation,
+
+normal_mods: u8 = 0,
+weak_mods: u8 = 0,
+normal_anti_mods: u8 = 0,
+weak_anti_mods: u8 = 0,
 
 pub fn init(impl: engine.Implementation) OutputHid {
     return .{ .impl = impl };
@@ -27,33 +30,65 @@ pub fn pushHidEvent(self: *OutputHid, key_code: KeyCode, down: bool) void {
         self.is_report_dirty = false;
     }
 
-    const report_mods: *HidReportMods = @ptrCast(&self.report[0]);
-    _ = report_mods;
-    const report_codes: *HidReportCodes = self.report[2..];
+    const hid_code: u8 = key_code.hid_code;
 
-    const code: u8 = key_code.hid_code;
+    // Mods
+    const report_mods = &self.report[0];
 
-    // TODO: Handle mods
-    // if (code >= 0xE0 and code <= 0xE7) {
-    //     report_mods.setValue(code - 0xE0, down);
-    //     self.is_report_dirty = true;
-    // } else {
-    var idx: ?usize = null;
+    // TODO: `hid_code != 0` doesn't necessarily guarantee lack of change in HID code.
+    // For example, pressing A then A on another key.
+    if ((self.weak_mods | self.weak_anti_mods) != 0 and down and hid_code != 0) {
+        self.weak_mods = 0;
+        self.weak_anti_mods = 0;
+        std.log.debug("cleared weak mods", .{});
+    }
 
-    for (report_codes, 0..) |rc, i| {
-        if ((down and rc == 0) or (!down and rc == code)) {
-            idx = i;
-            break;
+    const kc_normal_mods = key_code.modsAsByte(.normal, false);
+    const kc_weak_mods = key_code.modsAsByte(.weak, false);
+    const kc_normal_anti_mods = key_code.modsAsByte(.normal, true);
+    const kc_weak_anti_mods = key_code.modsAsByte(.weak, true);
+
+    if (down) {
+        self.weak_mods |= kc_weak_mods;
+        self.weak_anti_mods |= kc_weak_anti_mods;
+
+        self.normal_mods |= kc_normal_mods;
+        self.normal_anti_mods |= kc_normal_anti_mods;
+    } else {
+        self.weak_mods &= ~kc_weak_mods;
+        self.weak_anti_mods &= ~kc_weak_anti_mods;
+
+        self.normal_mods &= ~kc_normal_mods;
+        self.normal_anti_mods &= ~kc_normal_anti_mods;
+    }
+
+    const new_mods = (self.normal_mods | self.weak_mods) & ~(self.normal_anti_mods | self.weak_anti_mods);
+
+    if (new_mods != report_mods.*) {
+        report_mods.* = new_mods;
+        self.is_report_dirty = true;
+    }
+
+    // Code
+    const report_codes: *[6]u8 = self.report[2..];
+
+    if (hid_code < 0xE0) {
+        var idx: ?usize = null;
+
+        for (report_codes, 0..) |rc, i| {
+            if ((down and (rc == 0 or rc == hid_code)) or (!down and rc == hid_code)) {
+                idx = i;
+                break;
+            }
+        }
+
+        if (idx) |i| {
+            report_codes[i] = if (down) hid_code else 0;
+            self.is_report_dirty = true;
+        } else if (down) {
+            @panic("Unhandled case: No more HID report space."); // TODO
         }
     }
-
-    if (idx) |i| {
-        report_codes[i] = if (down) code else 0;
-        self.is_report_dirty = true;
-    } else if (down) {
-        @panic("Unhandled case: No more HID report space."); // TODO
-    }
-    // }
 }
 
 pub fn sendReports(self: *OutputHid) void {

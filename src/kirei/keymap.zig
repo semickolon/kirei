@@ -5,22 +5,46 @@ const KeyIndex = eng.KeyIndex;
 const Engine = eng.Engine;
 const ScheduleToken = eng.ScheduleToken;
 const Event = eng.Event;
-// const ProcessResult = eng.ProcessResult;
 const Implementation = eng.Implementation;
 
 pub const KeyCode = packed struct(u32) {
-    mods: packed struct(u8) {
-        lctl: bool = false,
-        lsft: bool = false,
-        lgui: bool = false,
-        lalt: bool = false,
-        rctl: bool = false,
-        rsft: bool = false,
-        rgui: bool = false,
-        ralt: bool = false,
+    mods: packed struct(u16) {
+        ctrl: Modifier = .{},
+        shift: Modifier = .{},
+        alt: Modifier = .{},
+        gui: Modifier = .{},
     } = .{},
-    hid_code: u8,
-    __pad: u16 = 0,
+    hid_code: u8 = 0,
+    __padding: u8 = 0,
+
+    pub const Modifier = packed struct(u4) {
+        side: enum(u2) { none, left, right, both } = .none,
+        props: Props = .{},
+    };
+
+    pub const Props = packed struct(u2) {
+        retention: Retention = .normal,
+        anti: bool = false,
+    };
+
+    const Retention = enum(u1) { normal, weak };
+
+    pub fn modsAsByte(self: KeyCode, retention: Retention, anti: bool) u8 {
+        var byte: u8 = 0;
+
+        inline for (.{ self.mods.ctrl, self.mods.shift, self.mods.alt, self.mods.gui }, 0..) |mod, i| {
+            if (mod.props.retention == retention and mod.props.anti == anti) {
+                byte |= switch (mod.side) {
+                    .none => 0,
+                    .left => (0x01 << i),
+                    .right => (0x10 << i),
+                    .both => (0x11 << i),
+                };
+            }
+        }
+
+        return byte;
+    }
 };
 
 pub const KeyMap = []const KeyDef;
