@@ -1,3 +1,8 @@
+let enumerate = fun arr => std.array.fold_left (fun acc e => acc @ [{
+    index = std.array.length acc,
+    value = e
+}] ) [] arr in
+
 {
     key_press = fun kcs => { tag = 'key_press, data.key_codes.value = kcs },
 
@@ -12,37 +17,8 @@
         tapping_term_ms = tapping_term_ms',
     } },
 
-    kc = {
-        A = [4],
-        B = [5],
-        C = [6],
-        D = [7],
-        E = [8],
-        F = [9],
-        G = [10],
-        H = [11],
-        I = [12],
-        J = [13],
-        K = [14],
-        L = [15],
-        M = [16],
-        N = [17],
-        O = [18],
-        P = [19],
-        Q = [20],
-        R = [21],
-        S = [22],
-        T = [23],
-        U = [24],
-        V = [25],
-        W = [26],
-        X = [27],
-        Y = [28],
-        Z = [29],
-        SPC = [44],
-        BSPC = [42],
-        LCTL = [224],
-        LSFT = [225],
-        LCTL_A = LCTL @ A,
-    },
+    kc = (import "codes.ncl")
+        |> enumerate
+        |> std.array.flat_map (fun { index, value } => std.array.map (fun str => { field = str, value = [index] }) value)
+        |> std.record.from_array,
 }

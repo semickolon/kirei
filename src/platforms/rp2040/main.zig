@@ -44,7 +44,7 @@ pub fn main() !void {
     while (true) {
         new = time.get_time_since_boot().to_us();
 
-        if (new - old >= 1000) {
+        if (new - old >= 5000) {
             old = new;
             led.toggle();
             interface.scan();
