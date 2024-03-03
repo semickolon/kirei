@@ -2,12 +2,9 @@ const std = @import("std");
 const rp2040 = @import("rp2040");
 
 pub fn build(b: *std.Build) void {
-    const hana = b.createModule(.{ .source_file = .{ .path = "src/lib/hana/hana.zig" } });
     const kirei = b.createModule(.{
         .source_file = .{ .path = "src/kirei/engine.zig" },
-        .dependencies = &.{
-            .{ .name = "hana", .module = hana },
-        },
+        .dependencies = &.{},
     });
     const common = b.createModule(.{
         .source_file = .{ .path = "src/common/common.zig" },

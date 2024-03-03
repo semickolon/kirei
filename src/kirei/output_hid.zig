@@ -1,6 +1,8 @@
 const std = @import("std");
 const engine = @import("engine.zig");
 
+const KeyCode = @import("keymap.zig").KeyCode;
+
 const OutputHid = @This();
 
 pub const HidReport = [8]u8;
@@ -19,35 +21,39 @@ pub fn init(impl: engine.Implementation) OutputHid {
     return .{ .impl = impl };
 }
 
-pub fn pushHidEvent(self: *OutputHid, code: u8, down: bool) void {
+pub fn pushHidEvent(self: *OutputHid, key_code: KeyCode, down: bool) void {
     if (self.is_report_dirty) {
         self.report_queue.append(self.report) catch @panic("OutputHid report queue overflow.");
         self.is_report_dirty = false;
     }
 
     const report_mods: *HidReportMods = @ptrCast(&self.report[0]);
+    _ = report_mods;
     const report_codes: *HidReportCodes = self.report[2..];
 
-    if (code >= 0xE0 and code <= 0xE7) {
-        report_mods.setValue(code - 0xE0, down);
-        self.is_report_dirty = true;
-    } else {
-        var idx: ?usize = null;
+    const code: u8 = key_code.hid_code;
 
-        for (report_codes, 0..) |rc, i| {
-            if ((down and rc == 0) or (!down and rc == code)) {
-                idx = i;
-                break;
-            }
-        }
+    // TODO: Handle mods
+    // if (code >= 0xE0 and code <= 0xE7) {
+    //     report_mods.setValue(code - 0xE0, down);
+    //     self.is_report_dirty = true;
+    // } else {
+    var idx: ?usize = null;
 
-        if (idx) |i| {
-            report_codes[i] = if (down) code else 0;
-            self.is_report_dirty = true;
-        } else if (down) {
-            // TODO: Handle case if there's no free space
+    for (report_codes, 0..) |rc, i| {
+        if ((down and rc == 0) or (!down and rc == code)) {
+            idx = i;
+            break;
         }
     }
+
+    if (idx) |i| {
+        report_codes[i] = if (down) code else 0;
+        self.is_report_dirty = true;
+    } else if (down) {
+        @panic("Unhandled case: No more HID report space."); // TODO
+    }
+    // }
 }
 
 pub fn sendReports(self: *OutputHid) void {

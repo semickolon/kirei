@@ -3,12 +3,15 @@ const std = @import("std");
 const OutputHid = @import("output_hid.zig");
 
 const keymap = @import("keymap.zig");
-pub const Keymap = keymap.Keymap;
+pub const KeyMap = keymap.KeyMap;
 pub const KeyDef = keymap.KeyDef;
+pub const KeyCode = keymap.KeyCode;
 
 pub const KeyIndex = u8;
 pub const TimeMillis = u16;
 pub const ScheduleToken = u8;
+
+const KEY_COUNT = 34; // TODO
 
 pub const KeyEvent = struct {
     key_idx: KeyIndex,
@@ -21,30 +24,12 @@ pub const TimeEvent = struct {
 
 pub const Event = struct {
     data: Data,
-    time: TimeMillis = 0,
-    handled: bool = false,
-    kd_idx: u6 = 0,
-    blocked: bool = false,
+    time: TimeMillis,
 
     pub const Data = union(enum) {
         key: KeyEvent,
         time: TimeEvent,
     };
-
-    fn init(data: Data, time: TimeMillis) Event {
-        return Event{
-            .data = data,
-            .time = time,
-        };
-    }
-
-    pub fn markHandled(self: *Event) void {
-        self.handled = true;
-    }
-
-    pub fn isHandled(self: Event) bool {
-        return self.handled;
-    }
 };
 
 pub const ProcessResult = union(enum) {
@@ -64,27 +49,27 @@ pub const Implementation = struct {
 };
 
 pub const Engine = struct {
-    keymap: Keymap,
+    impl: Implementation,
+    key_map: KeyMap,
+    keys_pressed: KeysPressed = KeysPressed.initEmpty(),
+    schedule_token_counter: ScheduleToken = 0,
     output_hid: OutputHid,
-    key_defs: KeyDefList,
+    key_defs: [KEY_COUNT]?*const KeyDef,
+    sync_key_idx: ?KeyIndex = null,
     events: EventList,
     ev_idx: u8 = 0,
-    impl: Implementation,
-    schedule_token_counter: ScheduleToken = 0,
-    keys_pressed: KeysPressed = KeysPressed.initEmpty(),
 
     const Self = @This();
 
-    const KeyDefList = std.BoundedArray(KeyDef, 16);
     const EventList = std.BoundedArray(Event, 64);
     const KeysPressed = std.StaticBitSet(std.math.maxInt(KeyIndex) + 1);
 
-    pub fn init(impl: Implementation, keymap_bytes: []align(4) const u8) !Self {
+    pub fn init(impl: Implementation, key_map: KeyMap) !Self {
         return Self{
             .impl = impl,
-            .keymap = try Keymap.init(impl, keymap_bytes),
+            .key_map = key_map,
             .output_hid = OutputHid.init(impl),
-            .key_defs = KeyDefList.init(0) catch unreachable,
+            .key_defs = [_]?*const KeyDef{null} ** KEY_COUNT,
             .events = EventList.init(0) catch unreachable,
         };
     }
@@ -95,121 +80,87 @@ pub const Engine = struct {
     }
 
     fn pushEvent(self: *Self, data: Event.Data) void {
-        self.events.append(Event.init(data, self.getTimeMillis())) catch @panic("Engine events overflow.");
+        self.events.append(.{
+            .data = data,
+            .time = self.getTimeMillis(),
+        }) catch @panic("Engine event overflow - push");
     }
 
-    fn unblockEvents(self: *Self, kd_idx: u6, pass_to_next_kd: bool) ?u8 {
-        var first_blocked_ev_idx: ?u8 = null;
-
-        for (self.events.slice(), 0..) |*event, i| {
-            if (event.kd_idx == kd_idx and event.blocked) {
-                event.blocked = false;
-
-                if (pass_to_next_kd)
-                    event.kd_idx += 1;
-
-                if (first_blocked_ev_idx == null)
-                    first_blocked_ev_idx = @truncate(i);
-            } else if (first_blocked_ev_idx != null) {
-                // Blocked events are contiguous so if there's no more matching blocked events, that's all of it
-                break;
+    fn setKeyDef(self: *Self, key_idx: KeyIndex, key_def: ?*const KeyDef) void {
+        if (key_def != null and key_def.?.getType() == .sync) {
+            if (self.sync_key_idx) |i| {
+                // If we're setting a new sync KeyDef while there's currently one, it must be the same key index.
+                std.debug.assert(key_idx == i);
+            } else {
+                self.sync_key_idx = key_idx;
             }
+        } else if (self.sync_key_idx == key_idx) {
+            self.sync_key_idx = null;
         }
 
-        return first_blocked_ev_idx;
+        self.key_defs[key_idx] = key_def;
     }
 
     fn processEvents(self: *Self) void {
         blk_ev: while (self.ev_idx < self.events.len) {
-            const ev = &self.events.slice()[self.ev_idx];
+            const ev = self.events.get(self.ev_idx);
 
-            if (ev.blocked) {
-                @panic("Engine encountered blocked event for processing.");
+            switch (ev.data) {
+                .key => |k| {
+                    const key_def = self.key_defs[k.key_idx];
+
+                    if (self.sync_key_idx != k.key_idx and key_def != null) {
+                        const completed = key_def.?.processSimple(self, k.down);
+                        _ = self.events.orderedRemove(self.ev_idx);
+
+                        if (completed) {
+                            self.setKeyDef(k.key_idx, null);
+                        }
+
+                        continue :blk_ev;
+                    }
+                },
+                .time => {},
             }
 
-            var kd_idx = ev.kd_idx;
+            if (self.sync_key_idx) |key_idx| {
+                const key_def = self.key_defs[key_idx].?;
+                const result = key_def.processSync(self, key_idx, ev);
 
-            while (kd_idx < self.key_defs.len) {
-                const key_def = &self.key_defs.slice()[kd_idx];
-                const result = key_def.process(self, ev);
-                const is_ev_handled = ev.isHandled();
-
-                if (is_ev_handled) {
+                if (result.event_handled) {
                     _ = self.events.orderedRemove(self.ev_idx);
                 }
 
-                switch (result) {
-                    .pass => {},
-                    .block => {},
-                    .transform => |next| {
-                        key_def.* = next;
-
-                        if (self.unblockEvents(kd_idx, false)) |i| {
-                            self.ev_idx = i;
-                            continue :blk_ev;
-                        }
-                    },
-                    .complete => {
-                        const first_blocked_ev_idx = self.unblockEvents(kd_idx, false);
-
-                        for (self.events.slice()) |*event| {
-                            if (event.kd_idx > kd_idx)
-                                event.kd_idx -= 1;
-                        }
-
-                        _ = self.key_defs.orderedRemove(kd_idx);
-
-                        if (first_blocked_ev_idx) |i| {
-                            self.ev_idx = i;
-                            continue :blk_ev;
-                        }
-                    },
-                }
-
-                if (is_ev_handled) {
-                    continue :blk_ev;
-                }
-
-                switch (result) {
-                    .pass => {
-                        if (self.unblockEvents(kd_idx, true)) |i| {
-                            ev.kd_idx = kd_idx + 1;
-                            self.ev_idx = i;
-                            continue :blk_ev;
-                        } else {
-                            kd_idx += 1;
-                        }
-                    },
-                    .block => {
-                        ev.kd_idx = kd_idx;
-                        ev.blocked = true;
+                switch (result.action) {
+                    .block => if (!result.event_handled) {
                         self.ev_idx += 1;
-                        continue :blk_ev;
                     },
-                    .transform => continue :blk_ev,
-                    .complete => {},
+                    .transform => |to_key_def| {
+                        self.setKeyDef(key_idx, to_key_def);
+                        self.ev_idx = 0;
+                    },
                 }
+
+                continue :blk_ev;
             }
 
-            // At this point, event is NOT handled. Try salvaging it. Otherwise, sayonara.
             switch (ev.data) {
-                .key => |key_ev| if (key_ev.down) {
-                    const key_def = self.keymap.parseKeyDef(key_ev.key_idx);
-                    self.key_defs.append(key_def) catch @panic("Engine key_defs overflow.");
+                .key => |k| if (k.down) {
+                    self.setKeyDef(k.key_idx, &self.key_map[k.key_idx]);
                     continue :blk_ev;
                 },
-                else => {},
+                .time => {},
             }
 
             _ = self.events.orderedRemove(self.ev_idx);
         }
     }
 
-    pub fn handleKeycode(self: *Self, keycode: u16, down: bool) void {
-        self.output_hid.pushHidEvent(@truncate(keycode), down);
+    pub fn handleKeycode(self: *Self, key_code: KeyCode, down: bool) void {
+        self.output_hid.pushHidEvent(key_code, down);
     }
 
-    pub fn scheduleTimeEvent(self: *Self, time: TimeMillis) ?ScheduleToken {
+    pub fn scheduleTimeEvent(self: *Self, time: TimeMillis) ScheduleToken {
         const token = self.schedule_token_counter;
         self.schedule_token_counter +%= 1;
 
@@ -232,9 +183,8 @@ pub const Engine = struct {
             if (ev.time >= time) {
                 self.events.insert(i, .{
                     .data = .{ .time = .{ .token = token } },
-                    .kd_idx = ev.kd_idx,
-                    .blocked = ev.blocked,
-                }) catch @panic("Engine events overflow 1.");
+                    .time = time,
+                }) catch @panic("Engine event overflow - retroactive");
                 break;
             }
         } else {

@@ -12,8 +12,47 @@ const Gpio = @import("gpio.zig").Gpio;
 
 const UmmAllocator = @import("umm").UmmAllocator(.{});
 
-// TODO: I cannot figure out how to embed this directly from `build.zig` since MicroZig has its own API over std build
-const keymap align(4) = @embedFile("keymap.kirei").*;
+const keymap: kirei.KeyMap = &.{
+    .{ .key_press = .{ .key_code = .{ .hid_code = 4 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 5 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 6 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 7 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 8 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 9 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 10 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 11 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 12 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 13 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 14 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 15 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 16 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 17 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 18 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 19 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 20 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 21 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 22 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 23 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 24 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 25 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 26 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 27 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 28 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 29 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 4 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 4 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 4 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 4 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 20 } } },
+    // .{ .key_press = .{ .key_code = .{ .hid_code = 21 } } },
+    .{ .hold_tap = .{
+        .tap_key_def = &.{ .key_press = .{ .key_code = .{ .hid_code = 4 } } },
+        .hold_key_def = &.{ .key_press = .{ .key_code = .{ .hid_code = 5 } } },
+        .timeout_ms = 1000,
+    } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 22 } } },
+    .{ .key_press = .{ .key_code = .{ .hid_code = 23 } } },
+};
 
 var engine: kirei.Engine = undefined;
 
@@ -94,7 +133,7 @@ var kscan = common.Kscan(Gpio){
         null,
         null,
         7,
-        17,
+        null, //17,
         27,
         null,
         null,
@@ -133,7 +172,7 @@ pub fn init() void {
             .scheduleCall = scheduler.enqueue,
             .cancelCall = scheduler.cancel,
         },
-        &keymap,
+        keymap,
     ) catch |e| {
         std.log.err("engine init failed: {any}", .{e});
         return;
