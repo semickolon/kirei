@@ -8,7 +8,9 @@ const ScheduleToken = eng.ScheduleToken;
 const Event = eng.Event;
 const Implementation = eng.Implementation;
 
-pub const KeyMap = []const lang.Expression(KeyDef);
+const Expression = lang.Expression;
+
+pub const KeyMap = []const Expression(KeyDef);
 
 pub const KeyCode = u12;
 
@@ -118,25 +120,84 @@ pub const KeyDef = union(enum) {
     }
 };
 
+pub const Macro = struct {
+    steps: Expression(Steps),
+
+    pub const Steps = []const Step;
+    pub const default: Macro = .{ .steps = .{ .literal = &.{} } };
+
+    pub fn execute(self: Macro, engine: *Engine) void {
+        for (self.steps.resolve(engine)) |step| {
+            step.execute(engine);
+        }
+    }
+};
+
+pub const Step = union(enum) {
+    press: KeyGroup,
+    release: KeyGroup,
+    tap: KeyGroup,
+
+    pub fn execute(self: Step, engine: *Engine) void {
+        switch (self) {
+            .press => |key_group| {
+                engine.output_hid.pushKeyGroup(key_group, true);
+            },
+            .release => |key_group| {
+                engine.output_hid.pushKeyGroup(key_group, false);
+            },
+            .tap => |key_group| {
+                engine.output_hid.pushKeyGroup(key_group, true);
+                engine.output_hid.pushKeyGroup(key_group, false);
+            },
+        }
+    }
+};
+
 pub const KeyPressBehavior = struct {
     key_group: KeyGroup,
+    hooks: ?*const struct {
+        on_press: Macro = Macro.default,
+        on_release: Macro = Macro.default,
+    } = null,
 
     pub fn process(self: KeyPressBehavior, engine: *Engine, down: bool) bool {
+        if (self.hooks) |h| {
+            if (down) h.on_press.execute(engine);
+        }
+
         engine.output_hid.pushKeyGroup(self.key_group, down);
+
+        if (self.hooks) |h| {
+            if (!down) h.on_release.execute(engine);
+        }
+
         return !down;
     }
 };
 
 pub const KeyToggleBehavior = struct {
     key_group: KeyGroup,
+    hooks: ?*const struct {
+        on_toggle_down: Macro = Macro.default,
+        on_toggle_up: Macro = Macro.default,
+    } = null,
 
     pub fn process(self: KeyToggleBehavior, engine: *Engine, down: bool) bool {
         if (down) {
-            engine.output_hid.pushKeyGroup(
-                self.key_group,
-                !engine.output_hid.isPressed(self.key_group.key_code),
-            );
+            const toggle_down = !engine.output_hid.isPressed(self.key_group.key_code);
+
+            if (self.hooks) |h| {
+                if (toggle_down) h.on_toggle_down.execute(engine);
+            }
+
+            engine.output_hid.pushKeyGroup(self.key_group, toggle_down);
+
+            if (self.hooks) |h| {
+                if (!toggle_down) h.on_toggle_up.execute(engine);
+            }
         }
+
         return true;
     }
 };

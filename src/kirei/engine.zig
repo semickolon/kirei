@@ -15,7 +15,19 @@ pub const ScheduleToken = u8;
 const compiled_key_map = true;
 
 pub const KM: KeyMap = &.{
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 4 } } } },
+    .{ .literal = .{ .key_press = .{
+        .key_group = .{ .key_code = 4 },
+        .hooks = &.{
+            .on_press = .{ .steps = .{ .literal = &.{
+                .{ .tap = .{ .key_code = 10 } },
+                .{ .tap = .{ .key_code = 11 } },
+            } } },
+            .on_release = .{ .steps = .{ .literal = &.{
+                .{ .tap = .{ .key_code = 12 } },
+                .{ .tap = .{ .key_code = 13 } },
+            } } },
+        },
+    } } },
     .{
         .literal = .{
             .key_press = .{
@@ -62,7 +74,22 @@ pub const KM: KeyMap = &.{
     .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 11 } } } },
     .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 12 } } } },
     .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 13 } } } },
-    .{ .literal = .{ .key_toggle = .{ .key_group = .{ .key_code = 0xE8 } } } },
+    .{ .literal = .{ .key_toggle = .{
+        .key_group = .{ .key_code = 0xE8 },
+        .hooks = &.{
+            .on_toggle_down = .{ .steps = .{ .literal = &.{
+                .{ .tap = .{ .key_code = 4 } },
+                .{ .tap = .{ .key_code = 5 } },
+                .{ .tap = .{ .key_code = 6 } },
+            } } },
+            .on_toggle_up = .{ .steps = .{ .literal = &.{
+                .{ .tap = .{ .key_code = 7 } },
+                .{ .tap = .{ .key_code = 8 } },
+                .{ .press = .{ .key_code = 9 } },
+                .{ .release = .{ .key_code = 9 } },
+            } } },
+        },
+    } } },
     .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 0x107 } } } },
     // .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 16 } } } },
     .{
