@@ -1,14 +1,9 @@
 const std = @import("std");
-
-const keymap_obj = @import("keymap_obj").K;
-const serializeKeymap = @import("kirei").Keymap.Hana.serialize;
+const s2s = @import("s2s");
+const keymap = @import("kirei").KM;
 
 pub fn main() !void {
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-
-    try serializeKeymap(std.io.getStdOut().writer(), keymap_obj, allocator);
+    try s2s.serialize(std.io.getStdOut().writer(), @TypeOf(keymap), keymap);
     return std.process.cleanExit();
 }
 

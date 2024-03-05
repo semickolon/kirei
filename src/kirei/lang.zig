@@ -2,6 +2,8 @@ const Engine = @import("engine.zig").Engine;
 const KeyIndex = @import("engine.zig").KeyIndex;
 const KeyCode = @import("keymap.zig").KeyCode;
 
+// TODO: Fix duplication of resolution code. Unify runtime and compile-time.
+
 pub fn Expression(comptime T: type) type {
     return union(enum) {
         literal: T,
@@ -120,6 +122,8 @@ pub const Condition = union(enum) {
                         return !(comptime cond.resolveFn())(engine);
                     },
                     .logical_and => |conditions| {
+                        // TODO: Is there a way to do this like `if (x and y and z and ...)`?
+                        // Or does the compiler know how to optimize this?
                         inline for (conditions) |cond| {
                             if (!(comptime cond.resolveFn())(engine))
                                 return false;
@@ -127,6 +131,8 @@ pub const Condition = union(enum) {
                         return true;
                     },
                     .logical_or => |conditions| {
+                        // TODO: Is there a way to do this like `if (x or y or z or ...)`?
+                        // Or does the compiler know how to optimize this?
                         inline for (conditions) |cond| {
                             if ((comptime cond.resolveFn())(engine))
                                 return true;

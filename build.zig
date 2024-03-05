@@ -12,18 +12,21 @@ pub fn build(b: *std.Build) void {
             .{ .name = "kirei", .module = kirei },
         },
     });
+
     const umm = b.createModule(.{ .source_file = .{ .path = "src/lib/umm/umm.zig" } });
     const uuid = b.createModule(.{ .source_file = .{ .path = "src/lib/uuid/uuid.zig" } });
+    const s2s = b.createModule(.{ .source_file = .{ .path = "src/lib/s2s/s2s.zig" } });
 
     const microzig = @import("microzig").init(b, "microzig");
 
+    // TODO: Reimplement Nickel integration
     // step: keymap
-    const nickel = b.addSystemCommand(&.{ "nickel", "export", "--format", "raw", "-f", "src/keymap.ncl" });
-    nickel.extra_file_dependencies = &.{
-        "src/kirei/ncl/keymap.ncl",
-        "src/kirei/ncl/utils.ncl",
-        "src/keymap.ncl",
-    };
+    // const nickel = b.addSystemCommand(&.{ "nickel", "export", "--format", "raw", "-f", "src/keymap.ncl" });
+    // nickel.extra_file_dependencies = &.{
+    //     "src/kirei/ncl/keymap.ncl",
+    //     "src/kirei/ncl/utils.ncl",
+    //     "src/keymap.ncl",
+    // };
 
     const keymap_gen = b.addExecutable(.{
         .name = "keymap_gen",
@@ -32,10 +35,11 @@ pub fn build(b: *std.Build) void {
     });
 
     keymap_gen.addModule("kirei", kirei);
-    keymap_gen.addAnonymousModule("keymap_obj", .{ .source_file = nickel.captureStdOut() });
+    keymap_gen.addModule("s2s", s2s);
+    // keymap_gen.addAnonymousModule("keymap_obj", .{ .source_file = nickel.captureStdOut() });
 
     const keymap_gen_run = b.addRunArtifact(keymap_gen);
-    keymap_gen_run.step.dependOn(&nickel.step);
+    keymap_gen_run.step.dependOn(&keymap_gen.step);
 
     const keymap_install = b.addInstallFile(keymap_gen_run.captureStdOut(), "keymap.kirei");
     keymap_install.step.dependOn(&keymap_gen_run.step);
