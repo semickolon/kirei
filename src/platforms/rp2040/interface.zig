@@ -130,7 +130,7 @@ pub fn init() void {
             .scheduleCall = scheduler.enqueue,
             .cancelCall = scheduler.cancel,
         },
-        &.{},
+        {},
     ) catch |e| {
         std.log.err("engine init failed: {any}", .{e});
         return;

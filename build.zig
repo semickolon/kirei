@@ -79,15 +79,15 @@ pub fn build(b: *std.Build) void {
         .dependencies = &.{},
     });
 
-    const nickel_test = b.addSystemCommand(&.{ "nickel", "export", "--format", "raw", "-f", "src/platforms/testing/tests/_gen.ncl" });
-    nickel_test.extra_file_dependencies = &.{
-        "src/kirei/ncl/keymap.ncl",
-        "src/kirei/ncl/lib.ncl",
-        "src/kirei/ncl/zig.ncl",
-        "src/platforms/testing/tests/key_press.ncl",
-    };
-
     if (platform == .testing) {
+        const nickel_test = b.addSystemCommand(&.{ "nickel", "export", "--format", "raw", "-f", "src/platforms/testing/tests/_gen.ncl" });
+        nickel_test.extra_file_dependencies = &.{
+            "src/kirei/ncl/keymap.ncl",
+            "src/kirei/ncl/lib.ncl",
+            "src/kirei/ncl/zig.ncl",
+            "src/platforms/testing/tests/key_press.ncl",
+        };
+
         exe.addModule("test", b.createModule(.{
             .source_file = nickel_test.captureStdOut(),
             .dependencies = &.{},
@@ -114,16 +114,12 @@ pub fn build(b: *std.Build) void {
         fw.addAppDependency("common", common, .{});
         fw.addAppDependency("umm", umm, .{});
         fw.addAppDependency("uuid", uuid, .{});
-    } else {
-        exe.addModule("kirei", kirei);
-        exe.addModule("common", common);
-        exe.addModule("umm", umm);
-        exe.addModule("uuid", uuid);
     }
 
-    // if (microzig_fw == null) {
-    //     exe.addAnonymousModule("keymap", .{ .source_file = nickel.captureStdOut() });
-    // }
+    exe.addModule("kirei", kirei);
+    exe.addModule("common", common);
+    exe.addModule("umm", umm);
+    exe.addModule("uuid", uuid);
 
     if (platform == .ch58x) {
         const link_file_path = "src/platforms/ch58x/link.ld";
