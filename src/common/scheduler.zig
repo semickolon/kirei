@@ -2,7 +2,7 @@ const std = @import("std");
 const kirei = @import("kirei");
 
 const Token = kirei.ScheduleToken;
-const Duration = kirei.TimeMillis;
+const Duration = kirei.Duration;
 
 pub fn SingleScheduler(
     comptime AbsoluteMillis: type,

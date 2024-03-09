@@ -91,5 +91,5 @@ pub fn pushKeyEvent(key_idx: kirei.KeyIndex, down: bool) void {
 
 fn getKireiTimeMillis() kirei.TimeMillis {
     // TODO: Handle wrap over rtc.MAX_CYCLE_32K
-    return @intCast(rtc.getTimeMillis() % (std.math.maxInt(u16) + 1));
+    return rtc.getTimeMillis();
 }

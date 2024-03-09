@@ -30,7 +30,7 @@ fn tmosEvtCall0() void {
     scheduler.callScheduled();
 }
 
-pub fn enqueue(duration: kirei.TimeMillis, token: kirei.ScheduleToken) void {
+pub fn enqueue(duration: kirei.Duration, token: kirei.ScheduleToken) void {
     scheduler.enqueue(duration, token);
 }
 

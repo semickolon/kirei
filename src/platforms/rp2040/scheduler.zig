@@ -26,7 +26,7 @@ pub fn getTimeMillis() u64 {
     return time.get_time_since_boot().to_us() / 1000;
 }
 
-pub fn enqueue(duration: kirei.TimeMillis, token: kirei.ScheduleToken) void {
+pub fn enqueue(duration: kirei.Duration, token: kirei.ScheduleToken) void {
     scheduler.enqueue(duration, token);
 }
 

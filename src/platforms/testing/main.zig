@@ -31,7 +31,7 @@ pub const Step = union(enum) {
         return .{ .key = .{ .key_idx = key_idx, .down = down } };
     }
 
-    fn w(duration: kirei.TimeMillis) Step {
+    fn w(duration: kirei.Duration) Step {
         return .{ .wait = duration };
     }
 

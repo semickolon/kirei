@@ -9,7 +9,8 @@ pub const KeyGroup = keymap.KeyGroup;
 pub const KeyCode = keymap.KeyCode;
 
 pub const KeyIndex = u8;
-pub const TimeMillis = u16;
+pub const TimeMillis = u32;
+pub const Duration = u16;
 pub const ScheduleToken = u8;
 
 const compiled_key_map = true;
@@ -248,7 +249,7 @@ pub const Implementation = struct {
 
     onReportPush: *const fn (report: *const OutputHid.HidReport) bool,
     getTimeMillis: *const fn () TimeMillis,
-    scheduleCall: *const fn (duration: TimeMillis, token: ScheduleToken) void,
+    scheduleCall: *const fn (duration: Duration, token: ScheduleToken) void,
     cancelCall: *const fn (token: ScheduleToken) void,
 };
 
@@ -367,10 +368,12 @@ pub const Engine = struct {
 
         const cur_time = self.impl.getTimeMillis();
 
-        if (time <= cur_time)
-            self.insertRetroactiveTimeEvent(time, token)
-        else
-            self.impl.scheduleCall(time -% cur_time, token);
+        if (time <= cur_time) {
+            self.insertRetroactiveTimeEvent(time, token);
+        } else {
+            const duration: Duration = @truncate(@min(std.math.maxInt(Duration), time - cur_time));
+            self.impl.scheduleCall(duration, token);
+        }
 
         return token;
     }

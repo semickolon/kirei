@@ -136,7 +136,6 @@ fn enterSleep(time: u32) callconv(.C) u32 {
         interrupts.globalSet(false);
         defer interrupts.globalSet(true);
 
-        // TODO: This is so C. Let's represent time units like `Duration` in Rust.
         const time_curr = rtc.getTime();
         const sleep_dur = if (time < time_curr)
             time + (rtc.MAX_CYCLE_32K - time_curr)

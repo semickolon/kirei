@@ -20,7 +20,7 @@ pub fn getTimeMillis() u64 {
     return @intCast(std.time.milliTimestamp());
 }
 
-pub fn enqueue(duration: kirei.TimeMillis, token: kirei.ScheduleToken) void {
+pub fn enqueue(duration: kirei.Duration, token: kirei.ScheduleToken) void {
     scheduler.enqueue(duration, token);
 }
 

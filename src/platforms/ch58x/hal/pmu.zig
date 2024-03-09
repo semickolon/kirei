@@ -25,7 +25,7 @@ const PficSysCtrl = packed struct(u32) {
     sleep_on_exit: bool,
     deep_sleep: bool,
     wfi_to_wfe: bool,
-    sevonpend: bool, // TODO: Better name
+    sevonpend: bool,
     wake_on_event: bool,
     __R1: u25,
     sys_reset: bool,
