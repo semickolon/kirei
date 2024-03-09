@@ -7,6 +7,11 @@ const Scheduler = @import("common").SingleScheduler(u64, getTimeMillis, implSche
 var scheduler = Scheduler{};
 var scheduled_time: ?u64 = null;
 
+pub fn reset() void {
+    scheduler = Scheduler{};
+    scheduled_time = null;
+}
+
 pub fn process() void {
     if (scheduled_time) |t| {
         if (t <= getTimeMillis()) {

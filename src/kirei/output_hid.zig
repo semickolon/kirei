@@ -21,6 +21,7 @@ normal_mods: u8 = 0,
 weak_mods: u8 = 0,
 normal_anti_mods: u8 = 0,
 weak_anti_mods: u8 = 0,
+weak_mods_late_binding: u8 = 0,
 
 state_a: std.StaticBitSet(32) = std.StaticBitSet(32).initEmpty(),
 
@@ -86,6 +87,14 @@ pub fn init(impl: engine.Implementation) OutputHid {
     return .{ .impl = impl };
 }
 
+fn isAnyHidKeyboardCodePressed(self: OutputHid) bool {
+    for (self.report[2..]) |code| {
+        if (code != 0)
+            return true;
+    }
+    return false;
+}
+
 pub fn pushKeyGroup(self: *OutputHid, key_group: KeyGroup, down: bool) void {
     if (self.is_report_dirty) {
         self.report_queue.append(self.report) catch @panic("OutputHid report queue overflow.");
@@ -93,46 +102,49 @@ pub fn pushKeyGroup(self: *OutputHid, key_group: KeyGroup, down: bool) void {
     }
 
     const key_code = key_group.key_code;
+    const kc_info = keymap.keyCodeInfo(key_code);
 
-    // Mods
-    const report_mods = &self.report[0];
+    { // Mods
+        const report_mods = &self.report[0];
 
-    // TODO: `key_code != 0` doesn't necessarily guarantee lack of change in reported HID codes.
-    // For example, pressing A then A on another key, or pressing a Kirei-space key.
-    if ((self.weak_mods | self.weak_anti_mods) != 0 and down and key_code != 0) {
-        self.weak_mods = 0;
-        self.weak_anti_mods = 0;
-    }
+        if ((self.weak_mods | self.weak_anti_mods) != 0 and kc_info.kind == .hid_keyboard_code) {
+            if ((down and self.isAnyHidKeyboardCodePressed()) or (!down and self.weak_mods_late_binding == kc_info.id)) {
+                self.weak_mods = 0;
+                self.weak_anti_mods = 0;
+                self.weak_mods_late_binding = 0;
+            } else if (down) {
+                self.weak_mods_late_binding = kc_info.id;
+            }
+        }
 
-    const kc_normal_mods = key_group.modsAsByte(.normal, false);
-    const kc_weak_mods = key_group.modsAsByte(.weak, false);
-    const kc_normal_anti_mods = key_group.modsAsByte(.normal, true);
-    const kc_weak_anti_mods = key_group.modsAsByte(.weak, true);
+        const kc_normal_mods = key_group.modsAsByte(.normal, false);
+        const kc_weak_mods = key_group.modsAsByte(.weak, false);
+        const kc_normal_anti_mods = key_group.modsAsByte(.normal, true);
+        const kc_weak_anti_mods = key_group.modsAsByte(.weak, true);
 
-    if (down) {
-        self.weak_mods |= kc_weak_mods;
-        self.weak_anti_mods |= kc_weak_anti_mods;
+        if (down) {
+            self.weak_mods |= kc_weak_mods;
+            self.weak_anti_mods |= kc_weak_anti_mods;
 
-        self.normal_mods |= kc_normal_mods;
-        self.normal_anti_mods |= kc_normal_anti_mods;
-    } else {
-        self.weak_mods &= ~kc_weak_mods;
-        self.weak_anti_mods &= ~kc_weak_anti_mods;
+            self.normal_mods |= kc_normal_mods;
+            self.normal_anti_mods |= kc_normal_anti_mods;
+        } else {
+            self.weak_mods &= ~kc_weak_mods;
+            self.weak_anti_mods &= ~kc_weak_anti_mods;
 
-        self.normal_mods &= ~kc_normal_mods;
-        self.normal_anti_mods &= ~kc_normal_anti_mods;
-    }
+            self.normal_mods &= ~kc_normal_mods;
+            self.normal_anti_mods &= ~kc_normal_anti_mods;
+        }
 
-    const new_mods = (self.normal_mods | self.weak_mods) & ~(self.normal_anti_mods | self.weak_anti_mods);
+        const new_mods = (self.normal_mods | self.weak_mods) & ~(self.normal_anti_mods | self.weak_anti_mods);
 
-    if (new_mods != report_mods.*) {
-        report_mods.* = new_mods;
-        self.is_report_dirty = true;
+        if (new_mods != report_mods.*) {
+            report_mods.* = new_mods;
+            self.is_report_dirty = true;
+        }
     }
 
     // Code
-    const kc_info = keymap.keyCodeInfo(key_code);
-
     switch (kc_info.kind) {
         .hid_keyboard_code => {
             const hid_code = kc_info.id;

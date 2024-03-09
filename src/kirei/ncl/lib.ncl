@@ -47,6 +47,12 @@ let rec lib = {
     kc = {
         A = { key_code = 4 },
         B = { key_code = 5 },
+        C = { key_code = 6 },
+        D = { key_code = 7 },
+        E = { key_code = 8 },
+        F = { key_code = 9 },
+        G = { key_code = 10 },
+        H = { key_code = 11 },
     },
 
     mod-base = fun name side' retention anti => {

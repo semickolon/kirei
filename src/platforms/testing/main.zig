@@ -3,19 +3,58 @@ const kirei = @import("kirei");
 
 const scheduler = @import("scheduler.zig");
 
-const @"test": Test = @import("test").@"test";
+const test_suite: TestSuite = @import("test").test_suite;
 
 const HidReport = [8]u8;
 
-pub const Test = struct {
+pub const TestSuite = struct {
     key_map: kirei.KeyMap,
-    steps: []const Step,
-    expected: []const HidEvent,
+    tests: []const Test,
 };
 
-pub const HidEvent = union(enum) {
-    pressed: u8,
-    released: u8,
+pub const Test = struct {
+    name: []const u8,
+    steps: []const Step,
+    expected: []const ExpectedHidReport,
+};
+
+pub const ExpectedHidReport = struct {
+    mods: u8,
+    codes: []const u8,
+
+    fn matches(self: ExpectedHidReport, actual: HidReport) bool {
+        if (self.mods != actual[0])
+            return false;
+
+        const actual_codes = blk: {
+            var list = std.ArrayList(u8).init(allocator);
+            for (actual[2..]) |code| {
+                if (code != 0)
+                    list.append(code) catch unreachable;
+            }
+            break :blk list.toOwnedSlice() catch unreachable;
+        };
+
+        if (self.codes.len != actual_codes.len)
+            return false;
+
+        if (self.codes.len == 0)
+            return true;
+
+        const codes: []u8 = allocator.alloc(u8, self.codes.len) catch unreachable;
+        defer allocator.free(codes);
+        @memcpy(codes, self.codes);
+
+        std.sort.insertion(u8, codes, {}, std.sort.asc(u8));
+        std.sort.insertion(u8, actual_codes, {}, std.sort.asc(u8));
+
+        for (0..codes.len) |i| {
+            if (codes[i] != actual_codes[i])
+                return false;
+        }
+
+        return true;
+    }
 };
 
 pub const Step = union(enum) {
@@ -46,90 +85,34 @@ pub const Step = union(enum) {
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 pub var engine: kirei.Engine = undefined;
-var last_report = std.mem.zeroes(HidReport);
-var expected_event_idx: usize = 0;
+
+var test_idx: usize = 0;
+var expected_report_idx: usize = 0;
 
 const allocator = gpa.allocator();
 
 fn onReportPush(report: *const HidReport) bool {
-    var events = std.ArrayList(HidEvent).init(allocator);
-    defer events.deinit();
+    std.log.debug("{any}", .{report.*});
 
-    deriveHidEvents(last_report, report.*, &events) catch unreachable;
+    const @"test" = &test_suite.tests[test_idx];
 
-    for (events.items) |event| {
-        std.log.debug("{any}", .{event});
-
-        if (expected_event_idx >= @"test".expected.len) {
-            @panic("Not enough expected events.");
-        }
-
-        const expected_event = @"test".expected[expected_event_idx];
-
-        if (!std.meta.eql(expected_event, event)) {
-            std.log.err("Expected {any}, got {any} at index {d}.", .{
-                expected_event,
-                event,
-                expected_event_idx,
-            });
-            @panic("Test failed.");
-        }
-
-        expected_event_idx += 1;
+    if (expected_report_idx >= @"test".expected.len) {
+        @panic("Not enough expected reports.");
     }
 
-    last_report = report.*;
+    const expected = @"test".expected[expected_report_idx];
+
+    if (!expected.matches(report.*)) {
+        std.log.err("Expected {any}, got {any} at index {d}.", .{
+            expected,
+            report.*,
+            expected_report_idx,
+        });
+        @panic("Test failed.");
+    }
+
+    expected_report_idx += 1;
     return true;
-}
-
-fn deriveHidEvents(
-    old_report: HidReport,
-    new_report: HidReport,
-    events: *std.ArrayList(HidEvent),
-) !void {
-    if (old_report[0] != new_report[0]) {
-        const changed_mods = old_report[0] ^ new_report[0];
-
-        for (0..8) |i| {
-            const mask = @as(u8, 1) << @intCast(i);
-
-            if ((changed_mods & mask) != 0) {
-                const pressed = (new_report[0] & mask) != 0;
-                const usage_id: u8 = 0xE0 + @as(u8, @intCast(i));
-
-                const event: HidEvent = if (pressed)
-                    .{ .pressed = usage_id }
-                else
-                    .{ .released = usage_id };
-
-                try events.append(event);
-            }
-        }
-    }
-
-    outer: for (old_report[2..]) |old_code| {
-        if (old_code == 0)
-            continue;
-
-        for (new_report[2..]) |new_code| {
-            if (old_code == new_code)
-                continue :outer; // No change
-        }
-
-        try events.append(.{ .released = old_code });
-    }
-
-    outer: for (new_report[2..]) |new_code| {
-        if (new_code == 0)
-            continue;
-
-        for (old_report[2..]) |old_code| {
-            if (old_code == new_code)
-                continue :outer; // No change
-        }
-
-        try events.append(.{ .pressed = new_code });
-    }
 }
 
 fn getKireiTimeMillis() kirei.TimeMillis {
@@ -143,27 +126,35 @@ fn process() void {
 }
 
 pub fn main() !void {
-    engine = try kirei.Engine.init(
-        .{
-            .allocator = allocator,
-            .onReportPush = onReportPush,
-            .getTimeMillis = getKireiTimeMillis,
-            .scheduleCall = scheduler.enqueue,
-            .cancelCall = scheduler.cancel,
-        },
-        @"test".key_map,
-    );
+    for (test_suite.tests, 0..) |@"test", i| {
+        std.log.info("{s}", .{@"test".name});
+        scheduler.reset();
 
-    for (@"test".steps) |step| {
-        process();
+        test_idx = i;
+        expected_report_idx = 0;
 
-        if (step.do()) |wait_until| {
-            while (scheduler.getTimeMillis() < wait_until) {
-                process();
+        engine = try kirei.Engine.init(
+            .{
+                .allocator = allocator,
+                .onReportPush = onReportPush,
+                .getTimeMillis = getKireiTimeMillis,
+                .scheduleCall = scheduler.enqueue,
+                .cancelCall = scheduler.cancel,
+            },
+            test_suite.key_map,
+        );
+
+        for (@"test".steps) |step| {
+            process();
+
+            if (step.do()) |wait_until| {
+                while (scheduler.getTimeMillis() < wait_until) {
+                    process();
+                }
             }
         }
-    }
 
-    process();
-    std.log.debug("PASS", .{});
+        process();
+        std.log.info("PASS", .{});
+    }
 }

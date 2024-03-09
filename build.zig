@@ -2,8 +2,9 @@ const std = @import("std");
 const rp2040 = @import("rp2040");
 
 const all_test_names = [_][]const u8{
-    "key_press/single",
-    "key_press/multiple",
+    "key_press/simple",
+    "key_press/mods",
+    "key_press/weak_mods",
 };
 
 pub fn build(b: *std.Build) void {
@@ -83,18 +84,18 @@ pub fn build(b: *std.Build) void {
     const common_modules = [_]*std.build.Module{ kirei, common, umm, uuid };
 
     if (platform == .testing) {
-        const test_names = b.option([]const []const u8, "tests", "Name of tests to run") orelse &all_test_names;
+        const test_suites = b.option([]const []const u8, "test_suites", "Name of test suites to run") orelse &all_test_names;
 
-        for (test_names) |tname| {
-            const temp_ncl_contents = std.fmt.allocPrint(b.allocator, "import \"{s}.ncl\"", .{tname}) catch unreachable;
+        for (test_suites) |ts_name| {
+            const temp_ncl_contents = std.fmt.allocPrint(b.allocator, "import \"{s}.ncl\"", .{ts_name}) catch unreachable;
             defer b.allocator.free(temp_ncl_contents);
 
-            const temp_ncl = b.addWriteFile("__test__.ncl", temp_ncl_contents);
+            const temp_ncl = b.addWriteFile("_test_suite.ncl", temp_ncl_contents);
 
-            const nickel_test = b.addSystemCommand(&.{ "nickel", "export", "--format", "raw", "_gen_test.ncl", "-I", "." });
+            const nickel_test = b.addSystemCommand(&.{ "nickel", "export", "--format", "raw", "_gen_test_suite.ncl", "-I", "." });
             nickel_test.cwd = "src/platforms/testing/tests";
 
-            const echo_tname = b.addSystemCommand(&.{ "echo", "TEST:", tname });
+            const echo_tname = b.addSystemCommand(&.{ "echo", "TEST SUITE:", ts_name });
             echo_tname.has_side_effects = true;
 
             // TODO: Following commented line is not working (https://github.com/ziglang/zig/issues/17715)
