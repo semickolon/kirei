@@ -96,19 +96,29 @@ pub const KM: KeyMap = &.{
         .swt = .{
             .branches = &.{
                 .{
-                    .condition = .{ .logical_and = &.{
-                        .{ .query = .{ .is_pressed = 0x04 } },
-                        .{ .query = .{ .is_pressed = 0xE8 } },
-                        .{ .query = .{ .is_pressed = 0xE1 } },
-                    } },
+                    .condition = .{
+                        .logical_and = &.{
+                            .{ .query = .{ .is_pressed = .{ .key_code = .{ .exact = 0x04 } } } },
+                            .{ .query = .{ .is_pressed = .{ .key_code = .{ .exact = 0xE8 } } } },
+                        },
+                    },
                     .value = .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 19 } } } },
                 },
                 .{
-                    .condition = .{ .query = .{ .is_pressed = 0xE8 } },
+                    .condition = .{ .query = .{ .is_pressed = .{ .key_code = .none, .mods = .{
+                        .unwanted,
+                        .required,
+                        .unwanted,
+                        .unwanted,
+                        .unwanted,
+                        .required,
+                        .unwanted,
+                        .unwanted,
+                    } } } },
                     .value = .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 18 } } } },
                 },
                 .{
-                    .condition = .{ .query = .{ .is_pressed = 0x04 } },
+                    .condition = .{ .query = .{ .is_pressed = .{ .key_code = .{ .exact = 0x04 } } } },
                     .value = .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 17 } } } },
                 },
             },
@@ -121,8 +131,26 @@ pub const KM: KeyMap = &.{
             .branches = &.{
                 .{
                     .condition = .{ .logical_or = &.{
-                        .{ .query = .{ .is_pressed = 0xE1 } },
-                        .{ .query = .{ .is_pressed = 0xE5 } },
+                        .{ .query = .{ .is_pressed = .{ .key_code = .none, .mods = .{
+                            .unwanted,
+                            .required,
+                            .unwanted,
+                            .unwanted,
+                            .unwanted,
+                            .optional,
+                            .unwanted,
+                            .unwanted,
+                        } } } },
+                        .{ .query = .{ .is_pressed = .{ .key_code = .none, .mods = .{
+                            .unwanted,
+                            .optional,
+                            .unwanted,
+                            .unwanted,
+                            .unwanted,
+                            .required,
+                            .unwanted,
+                            .unwanted,
+                        } } } },
                     } },
                     .value = .{
                         .literal = .{ .key_press = .{

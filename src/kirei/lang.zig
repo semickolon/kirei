@@ -1,6 +1,11 @@
-const Engine = @import("engine.zig").Engine;
-const KeyIndex = @import("engine.zig").KeyIndex;
-const KeyCode = @import("keymap.zig").KeyCode;
+const eng = @import("engine.zig");
+const keymap = @import("keymap.zig");
+const output_hid = @import("output_hid.zig");
+
+const Engine = eng.Engine;
+const KeyIndex = eng.KeyIndex;
+const KeyCode = keymap.KeyCode;
+const KeyPattern = output_hid.KeyPattern;
 
 // TODO: Fix duplication of resolution code. Unify runtime and compile-time.
 
@@ -146,12 +151,12 @@ pub const Condition = union(enum) {
 };
 
 pub const Query = union(enum) {
-    is_pressed: KeyCode,
+    is_pressed: KeyPattern,
     is_key_pressed: KeyIndex,
 
     pub fn resolve(self: Query, engine: *const Engine) bool {
         switch (self) {
-            .is_pressed => |key_code| return engine.output_hid.isPressed(key_code),
+            .is_pressed => |pattern| return engine.output_hid.matches(pattern),
             .is_key_pressed => |key_idx| return engine.isKeyPressed(key_idx),
         }
     }
@@ -164,7 +169,7 @@ pub const Query = union(enum) {
         return struct {
             fn resolve(engine: *const Engine) bool {
                 switch (self) {
-                    .is_pressed => |key_code| return engine.output_hid.isPressed(key_code),
+                    .is_pressed => |pattern| return engine.output_hid.matches(pattern),
                     .is_key_pressed => |key_idx| return engine.isKeyPressed(key_idx),
                 }
             }

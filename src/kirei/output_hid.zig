@@ -24,6 +24,49 @@ weak_anti_mods: u8 = 0,
 
 state_a: std.StaticBitSet(32) = std.StaticBitSet(32).initEmpty(),
 
+pub const KeyPattern = struct {
+    mods: [8]ModifierNecessity = [_]ModifierNecessity{.unwanted} ** 8,
+    key_code: KeyCodePattern,
+
+    pub const ModifierNecessity = enum { unwanted, required, optional };
+
+    pub const KeyCodePattern = union(enum) {
+        none: void,
+        exact: KeyCode,
+        range: struct { from: KeyCode, to: KeyCode },
+    };
+
+    pub fn matchesKeyCode(self: KeyPattern, key_code: KeyCode) bool {
+        return switch (self) {
+            .none => true,
+            .exact => |kc| kc == key_code,
+            .range => |range| range.from >= key_code and range.to <= key_code,
+        };
+    }
+
+    pub fn matchesMods(self: KeyPattern, mods: u8) bool {
+        var optional_mods: u8 = 0;
+        var exact_mods: u8 = 0;
+        var mask: u8 = 1;
+
+        for (self.mods) |mod| {
+            switch (mod) {
+                .optional => optional_mods |= mask,
+                .required => exact_mods |= mask,
+                .unwanted => {},
+            }
+
+            mask <<= 1;
+        }
+
+        return (mods & ~optional_mods) == exact_mods;
+    }
+
+    pub fn matches(self: KeyPattern, key_code: KeyCode, mods: u8) bool {
+        return self.matchesKeyCode(key_code) and self.matchesMods(mods);
+    }
+};
+
 pub fn init(impl: engine.Implementation) OutputHid {
     return .{ .impl = impl };
 }
@@ -127,7 +170,7 @@ pub fn sendReports(self: *OutputHid) void {
     }
 }
 
-pub fn isPressed(self: OutputHid, key_code: KeyCode) bool {
+pub fn isKeyCodePressed(self: OutputHid, key_code: KeyCode) bool {
     const kc_info = keymap.keyCodeInfo(key_code);
 
     switch (kc_info.kind) {
@@ -148,4 +191,16 @@ pub fn isPressed(self: OutputHid, key_code: KeyCode) bool {
         },
         .reserved => return false,
     }
+}
+
+pub fn matches(self: OutputHid, pattern: KeyPattern) bool {
+    const key_code_matches = switch (pattern.key_code) {
+        .none => true,
+        .exact => |kc| self.isKeyCodePressed(kc),
+        .range => |range| for (range.from..range.to) |kc| {
+            if (self.isKeyCodePressed(@truncate(kc))) break true;
+        } else false,
+    };
+
+    return key_code_matches and pattern.matchesMods(self.report[0]);
 }

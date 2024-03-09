@@ -19,7 +19,7 @@ const KeyCodeInfo = struct {
     id: u8,
 
     const Kind = enum {
-        hid_keyboard_code, // 0x00 - 0xDF
+        hid_keyboard_code, // 0x04 - 0xDF
         hid_keyboard_modifier, // 0xE0 - 0xE7
         kirei_state_a, // 0xE8 - 0x107
         reserved,
@@ -28,6 +28,7 @@ const KeyCodeInfo = struct {
 
 pub fn keyCodeInfo(key_code: KeyCode) KeyCodeInfo {
     const ranges = .{
+        // TODO: Offset 0x04
         .{ 0x00, 0xDF, KeyCodeInfo.Kind.hid_keyboard_code },
         .{ 0xE0, 0xE7, KeyCodeInfo.Kind.hid_keyboard_modifier },
         .{ 0xE8, 0x107, KeyCodeInfo.Kind.kirei_state_a },
@@ -66,7 +67,7 @@ pub const KeyGroup = packed struct(u32) {
         anti: bool = false,
     };
 
-    const Retention = enum(u1) { normal, weak };
+    pub const Retention = enum(u1) { normal, weak };
 
     pub fn modsAsByte(self: KeyGroup, retention: Retention, anti: bool) u8 {
         var byte: u8 = 0;
@@ -185,7 +186,7 @@ pub const KeyToggleBehavior = struct {
 
     pub fn process(self: KeyToggleBehavior, engine: *Engine, down: bool) bool {
         if (down) {
-            const toggle_down = !engine.output_hid.isPressed(self.key_group.key_code);
+            const toggle_down = !engine.output_hid.isKeyCodePressed(self.key_group.key_code);
 
             if (self.hooks) |h| {
                 if (toggle_down) h.on_toggle_down.execute(engine);
