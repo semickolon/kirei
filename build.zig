@@ -2,50 +2,21 @@ const std = @import("std");
 const rp2040 = @import("rp2040");
 
 pub fn build(b: *std.Build) void {
-    const kirei = b.createModule(.{
-        .source_file = .{ .path = "src/kirei/engine.zig" },
-        .dependencies = &.{},
-    });
-    const common = b.createModule(.{
-        .source_file = .{ .path = "src/common/common.zig" },
-        .dependencies = &.{
-            .{ .name = "kirei", .module = kirei },
-        },
-    });
-
     const umm = b.createModule(.{ .source_file = .{ .path = "src/lib/umm/umm.zig" } });
     const uuid = b.createModule(.{ .source_file = .{ .path = "src/lib/uuid/uuid.zig" } });
     const s2s = b.createModule(.{ .source_file = .{ .path = "src/lib/s2s/s2s.zig" } });
+    _ = s2s;
 
     const microzig = @import("microzig").init(b, "microzig");
 
-    // TODO: Reimplement Nickel integration
     // step: keymap
-    // const nickel = b.addSystemCommand(&.{ "nickel", "export", "--format", "raw", "-f", "src/keymap.ncl" });
-    // nickel.extra_file_dependencies = &.{
-    //     "src/kirei/ncl/keymap.ncl",
-    //     "src/kirei/ncl/utils.ncl",
-    //     "src/keymap.ncl",
-    // };
-
-    const keymap_gen = b.addExecutable(.{
-        .name = "keymap_gen",
-        .root_source_file = .{ .path = "src/kirei/build/keymap_gen.zig" },
-        .target = std.zig.CrossTarget.fromTarget(b.host.target),
-    });
-
-    keymap_gen.addModule("kirei", kirei);
-    keymap_gen.addModule("s2s", s2s);
-    // keymap_gen.addAnonymousModule("keymap_obj", .{ .source_file = nickel.captureStdOut() });
-
-    const keymap_gen_run = b.addRunArtifact(keymap_gen);
-    keymap_gen_run.step.dependOn(&keymap_gen.step);
-
-    const keymap_install = b.addInstallFile(keymap_gen_run.captureStdOut(), "keymap.kirei");
-    keymap_install.step.dependOn(&keymap_gen_run.step);
-
-    const step_keymap = b.step("keymap", "Build keymap.kirei");
-    step_keymap.dependOn(&keymap_install.step);
+    const nickel = b.addSystemCommand(&.{ "nickel", "export", "--format", "raw", "-f", "src/keymap.ncl" });
+    nickel.extra_file_dependencies = &.{
+        "src/kirei/ncl/keymap.ncl",
+        "src/kirei/ncl/lib.ncl",
+        "src/kirei/ncl/zig.ncl",
+        "src/keymap.ncl",
+    };
 
     // step: default
     const platform = b.option(
@@ -98,6 +69,46 @@ pub fn build(b: *std.Build) void {
             .root_source_file = .{ .path = root_path },
         });
 
+    const embedded_key_map = platform != .testing;
+
+    const options = b.addOptions();
+    options.addOption(bool, "embedded_key_map", embedded_key_map);
+
+    const keymap = b.createModule(.{
+        .source_file = nickel.captureStdOut(),
+        .dependencies = &.{},
+    });
+
+    const nickel_test = b.addSystemCommand(&.{ "nickel", "export", "--format", "raw", "-f", "src/platforms/testing/tests/_gen.ncl" });
+    nickel_test.extra_file_dependencies = &.{
+        "src/kirei/ncl/keymap.ncl",
+        "src/kirei/ncl/lib.ncl",
+        "src/kirei/ncl/zig.ncl",
+        "src/platforms/testing/tests/key_press.ncl",
+    };
+
+    if (platform == .testing) {
+        exe.addModule("test", b.createModule(.{
+            .source_file = nickel_test.captureStdOut(),
+            .dependencies = &.{},
+        }));
+    }
+
+    const kirei = b.createModule(.{
+        .source_file = .{ .path = "src/kirei/engine.zig" },
+        .dependencies = &.{
+            .{ .name = "keymap", .module = keymap },
+            .{ .name = "config", .module = options.createModule() },
+        },
+    });
+
+    const common = b.createModule(.{
+        .source_file = .{ .path = "src/common/common.zig" },
+        .dependencies = &.{
+            .{ .name = "kirei", .module = kirei },
+        },
+    });
+
     if (microzig_fw) |fw| {
         fw.addAppDependency("kirei", kirei, .{});
         fw.addAppDependency("common", common, .{});
@@ -111,7 +122,7 @@ pub fn build(b: *std.Build) void {
     }
 
     // if (microzig_fw == null) {
-    //     exe.addAnonymousModule("keymap", .{ .source_file = keymap_gen_run.captureStdOut() });
+    //     exe.addAnonymousModule("keymap", .{ .source_file = nickel.captureStdOut() });
     // }
 
     if (platform == .ch58x) {

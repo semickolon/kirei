@@ -3,12 +3,12 @@ const kirei = @import("kirei");
 
 const scheduler = @import("scheduler.zig");
 
+const @"test": Test = @import("test").@"test";
+
 const HidReport = [8]u8;
 
 pub var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 pub var engine: kirei.Engine = undefined;
-
-const keymap align(4) = @embedFile("keymap").*;
 
 fn onReportPush(report: *const HidReport) bool {
     std.log.debug("{any}", .{report.*});
@@ -20,15 +20,22 @@ fn getKireiTimeMillis() kirei.TimeMillis {
     return @truncate(t % (std.math.maxInt(kirei.TimeMillis) + 1));
 }
 
+pub const Test = struct {
+    key_map: kirei.KeyMap,
+    steps: []const Step,
+    expected: []const u8,
+};
+
 pub const Step = union(enum) {
-    key: struct {
-        key_idx: kirei.KeyIndex,
-        down: bool,
-    },
-    wait: kirei.TimeMillis,
+    press: kirei.KeyIndex,
+    release: kirei.KeyIndex,
+    wait: kirei.Duration,
 
     fn k(key_idx: kirei.KeyIndex, down: bool) Step {
-        return .{ .key = .{ .key_idx = key_idx, .down = down } };
+        return if (down)
+            .{ .press = key_idx }
+        else
+            .{ .release = key_idx };
     }
 
     fn w(duration: kirei.Duration) Step {
@@ -37,28 +44,12 @@ pub const Step = union(enum) {
 
     fn do(self: Step) ?u64 {
         switch (self) {
-            .key => |ks| engine.pushKeyEvent(ks.key_idx, ks.down),
+            .press => |key_idx| engine.pushKeyEvent(key_idx, true),
+            .release => |key_idx| engine.pushKeyEvent(key_idx, false),
             .wait => |ms| return scheduler.getTimeMillis() + ms,
         }
         return null;
     }
-};
-
-const steps = [_]Step{
-    Step.k(0, true),
-    Step.k(0, false),
-    Step.w(300),
-    Step.k(0, true),
-    Step.w(100),
-    Step.k(0, false),
-    Step.w(100),
-    Step.k(0, true),
-    Step.w(300),
-    Step.k(1, true),
-    Step.k(1, false),
-    Step.k(1, true),
-    Step.w(250),
-    // Step.k(1, false),
 };
 
 fn process() void {
@@ -75,10 +66,10 @@ pub fn main() !void {
             .scheduleCall = scheduler.enqueue,
             .cancelCall = scheduler.cancel,
         },
-        &keymap,
+        @"test".key_map,
     );
 
-    for (steps) |step| {
+    for (@"test".steps) |step| {
         process();
 
         if (step.do()) |wait_until| {

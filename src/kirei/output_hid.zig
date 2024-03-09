@@ -24,6 +24,21 @@ weak_anti_mods: u8 = 0,
 
 state_a: std.StaticBitSet(32) = std.StaticBitSet(32).initEmpty(),
 
+// key_record_history: [16]KeyRecord,
+// current_key_record: ?KeyRecord,
+
+pub const KeyRecord = packed struct(u64) {
+    mods: u8,
+    key_code: KeyCode,
+    __pad1: u12,
+    time: engine.TimeMillis,
+    __pad2: u16,
+
+    pub fn matches(self: KeyRecord, pattern: KeyPattern) bool {
+        return pattern.matches(self.key_code, self.mods);
+    }
+};
+
 pub const KeyPattern = struct {
     mods: [8]ModifierNecessity = [_]ModifierNecessity{.unwanted} ** 8,
     key_code: KeyCodePattern,

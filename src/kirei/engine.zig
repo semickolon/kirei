@@ -13,217 +13,28 @@ pub const TimeMillis = u32;
 pub const Duration = u16;
 pub const ScheduleToken = u8;
 
-const compiled_key_map = true;
+const config = @import("config");
 
-pub const KM: KeyMap = &.{
-    .{ .literal = .{ .key_press = .{
-        .key_group = .{ .key_code = 4 },
-        .hooks = &.{
-            .on_press = .{ .steps = .{ .literal = &.{
-                .{ .tap = .{ .key_code = 10 } },
-                .{ .tap = .{ .key_code = 11 } },
-            } } },
-            .on_release = .{ .steps = .{ .literal = &.{
-                .{ .tap = .{ .key_code = 12 } },
-                .{ .tap = .{ .key_code = 13 } },
-            } } },
-        },
-    } } },
-    .{
-        .literal = .{
-            .key_press = .{
-                .key_group = .{
-                    .key_code = 5,
-                    .mods = .{
-                        .shift = .{ .side = .both, .props = .{ .anti = true, .retention = .weak } },
-                    },
-                },
-            },
-        },
-    },
-    .{
-        .literal = .{
-            .key_press = .{
-                .key_group = .{
-                    // .key_code = 5,
-                    .mods = .{
-                        .shift = .{
-                            .side = .both,
-                            .props = .{ .retention = .normal },
-                        },
-                    },
-                },
-            },
-        },
-    },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 8 } } } },
-    .{ .literal = .{
-        .key_press = .{
-            .key_group = .{
-                .key_code = 0x1E,
-                .mods = .{
-                    .shift = .{
-                        .side = .left,
-                        .props = .{ .retention = .weak },
-                    },
-                },
-            },
-        },
-    } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 0 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 10 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 11 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 12 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 13 } } } },
-    .{ .literal = .{ .key_toggle = .{
-        .key_group = .{ .key_code = 0xE8 },
-        .hooks = &.{
-            .on_toggle_down = .{ .steps = .{ .literal = &.{
-                .{ .tap = .{ .key_code = 4 } },
-                .{ .tap = .{ .key_code = 5 } },
-                .{ .tap = .{ .key_code = 6 } },
-            } } },
-            .on_toggle_up = .{ .steps = .{ .literal = &.{
-                .{ .tap = .{ .key_code = 7 } },
-                .{ .tap = .{ .key_code = 8 } },
-                .{ .press = .{ .key_code = 9 } },
-                .{ .release = .{ .key_code = 9 } },
-            } } },
-        },
-    } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 0x107 } } } },
-    // .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 16 } } } },
-    .{
-        .swt = .{
-            .branches = &.{
-                .{
-                    .condition = .{
-                        .logical_and = &.{
-                            .{ .query = .{ .is_pressed = .{ .key_code = .{ .exact = 0x04 } } } },
-                            .{ .query = .{ .is_pressed = .{ .key_code = .{ .exact = 0xE8 } } } },
-                        },
-                    },
-                    .value = .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 19 } } } },
-                },
-                .{
-                    .condition = .{ .query = .{ .is_pressed = .{ .key_code = .none, .mods = .{
-                        .unwanted,
-                        .required,
-                        .unwanted,
-                        .unwanted,
-                        .unwanted,
-                        .required,
-                        .unwanted,
-                        .unwanted,
-                    } } } },
-                    .value = .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 18 } } } },
-                },
-                .{
-                    .condition = .{ .query = .{ .is_pressed = .{ .key_code = .{ .exact = 0x04 } } } },
-                    .value = .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 17 } } } },
-                },
-            },
-            .fallback = .{ .key_press = .{ .key_group = .{ .key_code = 16 } } },
-        },
-    },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 17 } } } },
-    .{
-        .swt = .{
-            .branches = &.{
-                .{
-                    .condition = .{ .logical_or = &.{
-                        .{ .query = .{ .is_pressed = .{ .key_code = .none, .mods = .{
-                            .unwanted,
-                            .required,
-                            .unwanted,
-                            .unwanted,
-                            .unwanted,
-                            .optional,
-                            .unwanted,
-                            .unwanted,
-                        } } } },
-                        .{ .query = .{ .is_pressed = .{ .key_code = .none, .mods = .{
-                            .unwanted,
-                            .optional,
-                            .unwanted,
-                            .unwanted,
-                            .unwanted,
-                            .required,
-                            .unwanted,
-                            .unwanted,
-                        } } } },
-                    } },
-                    .value = .{
-                        .literal = .{ .key_press = .{
-                            .key_group = .{
-                                .key_code = 0x21,
-                                .mods = .{
-                                    .shift = .{
-                                        .side = .both,
-                                        .props = .{ .retention = .weak, .anti = true },
-                                    },
-                                },
-                            },
-                        } },
-                    },
-                },
-            },
-            .fallback = .{ .key_press = .{
-                .key_group = .{
-                    .key_code = 0x21,
-                    .mods = .{
-                        .shift = .{
-                            .side = .left,
-                            .props = .{ .retention = .weak },
-                        },
-                    },
-                },
-            } },
-        },
-    },
-    // .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 18 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 19 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 20 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 21 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 22 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 23 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 24 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 25 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 26 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 27 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 28 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 29 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 4 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 4 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 4 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 4 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 20 } } } },
-    // .{ .key_press = .{ .key_group = .{ .key_code = 21 } } },
-    .{ .literal = .{ .hold_tap = .{
-        .tap_key_def = &.{ .key_press = .{ .key_group = .{ .key_code = 4 } } },
-        .hold_key_def = &.{ .key_press = .{ .key_group = .{ .key_code = 5 } } },
-        .timeout_ms = 1000,
-    } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 22 } } } },
-    .{ .literal = .{ .key_press = .{ .key_group = .{ .key_code = 23 } } } },
-};
+const embedded_key_map: ?KeyMap =
+    if (config.embedded_key_map) @import("keymap").key_map else null;
+
+const key_count =
+    if (config.embedded_key_map) embedded_key_map.?.len else 256;
 
 fn resolveKeyDef(key_idx: KeyIndex, engine: *const Engine) KeyDef {
-    if (compiled_key_map) {
-        std.debug.assert(KM.len <= std.math.maxInt(KeyIndex) + 1);
+    if (embedded_key_map) |key_map| {
+        comptime std.debug.assert(key_map.len <= std.math.maxInt(KeyIndex) + 1);
 
-        inline for (KM, 0..) |expr, i| {
+        inline for (key_map, 0..) |expr, i| {
             if (key_idx == i) {
                 return (comptime expr.resolveFn())(engine);
             }
         }
-        unreachable;
+        unreachable; // TODO: Ackchually, this is reachable
     } else {
         return engine.key_map[key_idx].resolve(engine);
     }
 }
-
-const KEY_COUNT = 34; // TODO
 
 pub const KeyEvent = struct {
     key_idx: KeyIndex,
@@ -255,26 +66,27 @@ pub const Implementation = struct {
 
 pub const Engine = struct {
     impl: Implementation,
-    key_map: if (compiled_key_map) void else KeyMap,
+    key_map: EngineKeyMap,
     keys_pressed: KeysPressed = KeysPressed.initEmpty(),
     schedule_token_counter: ScheduleToken = 0,
     output_hid: OutputHid,
-    key_defs: [KEY_COUNT]?KeyDef,
+    key_defs: [key_count]?KeyDef,
     sync_key_idx: ?KeyIndex = null,
     events: EventList,
     ev_idx: u8 = 0,
 
     const Self = @This();
 
+    const EngineKeyMap = if (embedded_key_map != null) void else KeyMap;
     const EventList = std.BoundedArray(Event, 64);
-    const KeysPressed = std.StaticBitSet(KEY_COUNT);
+    const KeysPressed = std.StaticBitSet(key_count);
 
-    pub fn init(impl: Implementation, key_map: KeyMap) !Self {
+    pub fn init(impl: Implementation, key_map: EngineKeyMap) !Self {
         return Self{
             .impl = impl,
-            .key_map = if (compiled_key_map) {} else key_map,
+            .key_map = key_map,
             .output_hid = OutputHid.init(impl),
-            .key_defs = [_]?KeyDef{null} ** KEY_COUNT,
+            .key_defs = [_]?KeyDef{null} ** key_count,
             .events = EventList.init(0) catch unreachable,
         };
     }
