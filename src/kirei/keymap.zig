@@ -28,18 +28,18 @@ const KeyCodeInfo = struct {
 
 pub fn keyCodeInfo(key_code: KeyCode) KeyCodeInfo {
     const ranges = .{
-        // TODO: Offset 0x04
-        .{ 0x00, 0xDF, KeyCodeInfo.Kind.hid_keyboard_code },
-        .{ 0xE0, 0xE7, KeyCodeInfo.Kind.hid_keyboard_modifier },
-        .{ 0xE8, 0x107, KeyCodeInfo.Kind.kirei_state_a },
+        // .{ start inclusive, end inclusive, kind, offset }
+        .{ 0x04, 0xDF, KeyCodeInfo.Kind.hid_keyboard_code, 4 },
+        .{ 0xE0, 0xE7, KeyCodeInfo.Kind.hid_keyboard_modifier, 0 },
+        .{ 0xE8, 0x107, KeyCodeInfo.Kind.kirei_state_a, 0 },
     };
 
     inline for (ranges) |range| {
         if (key_code >= range[0] and key_code <= range[1]) {
-            std.debug.assert((range[1] - range[0]) < 256);
+            comptime std.debug.assert((range[1] - range[0] + range[3]) < 256);
             return .{
                 .kind = range[2],
-                .id = @truncate(key_code - range[0]),
+                .id = @truncate(key_code - range[0] + range[3]),
             };
         }
     }
