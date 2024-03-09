@@ -1,6 +1,11 @@
 const std = @import("std");
 const rp2040 = @import("rp2040");
 
+const all_test_names = [_][]const u8{
+    "key_press/single",
+    "key_press/multiple",
+};
+
 pub fn build(b: *std.Build) void {
     const umm = b.createModule(.{ .source_file = .{ .path = "src/lib/umm/umm.zig" } });
     const uuid = b.createModule(.{ .source_file = .{ .path = "src/lib/uuid/uuid.zig" } });
@@ -10,7 +15,7 @@ pub fn build(b: *std.Build) void {
     const microzig = @import("microzig").init(b, "microzig");
 
     // step: keymap
-    const nickel = b.addSystemCommand(&.{ "nickel", "export", "--format", "raw", "-f", "src/keymap.ncl" });
+    const nickel = b.addSystemCommand(&.{ "nickel", "export", "--format", "raw", "src/keymap.ncl" });
     nickel.extra_file_dependencies = &.{
         "src/kirei/ncl/keymap.ncl",
         "src/kirei/ncl/lib.ncl",
@@ -22,7 +27,7 @@ pub fn build(b: *std.Build) void {
     const platform = b.option(
         enum { testing, ch58x, rp2040 },
         "platform",
-        "Platform to build for",
+        "The platform to build for",
     ) orelse .testing;
 
     const target = switch (platform) {
@@ -49,26 +54,6 @@ pub fn build(b: *std.Build) void {
         .rp2040 => "kirei-rp2040",
     };
 
-    const microzig_fw = if (platform == .rp2040)
-        microzig.addFirmware(b, .{
-            .name = name,
-            .target = rp2040.boards.raspberry_pi.pico,
-            .optimize = optimize,
-            .source_file = .{ .path = root_path },
-        })
-    else
-        null;
-
-    const exe = if (microzig_fw) |fw|
-        fw.artifact
-    else
-        b.addExecutable(.{
-            .name = name,
-            .target = target,
-            .optimize = optimize,
-            .root_source_file = .{ .path = root_path },
-        });
-
     const embedded_key_map = platform != .testing;
 
     const options = b.addOptions();
@@ -78,21 +63,6 @@ pub fn build(b: *std.Build) void {
         .source_file = nickel.captureStdOut(),
         .dependencies = &.{},
     });
-
-    if (platform == .testing) {
-        const nickel_test = b.addSystemCommand(&.{ "nickel", "export", "--format", "raw", "-f", "src/platforms/testing/tests/_gen.ncl" });
-        nickel_test.extra_file_dependencies = &.{
-            "src/kirei/ncl/keymap.ncl",
-            "src/kirei/ncl/lib.ncl",
-            "src/kirei/ncl/zig.ncl",
-            "src/platforms/testing/tests/key_press.ncl",
-        };
-
-        exe.addModule("test", b.createModule(.{
-            .source_file = nickel_test.captureStdOut(),
-            .dependencies = &.{},
-        }));
-    }
 
     const kirei = b.createModule(.{
         .source_file = .{ .path = "src/kirei/engine.zig" },
@@ -109,35 +79,111 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    if (microzig_fw) |fw| {
-        fw.addAppDependency("kirei", kirei, .{});
-        fw.addAppDependency("common", common, .{});
-        fw.addAppDependency("umm", umm, .{});
-        fw.addAppDependency("uuid", uuid, .{});
+    const common_module_names = [_][]const u8{ "kirei", "common", "umm", "uuid" };
+    const common_modules = [_]*std.build.Module{ kirei, common, umm, uuid };
+
+    if (platform == .testing) {
+        const test_names = b.option([]const []const u8, "tests", "Name of tests to run") orelse &all_test_names;
+
+        for (test_names) |tname| {
+            const temp_ncl_contents = std.fmt.allocPrint(b.allocator, "import \"{s}.ncl\"", .{tname}) catch unreachable;
+            defer b.allocator.free(temp_ncl_contents);
+
+            const temp_ncl = b.addWriteFile("__test__.ncl", temp_ncl_contents);
+
+            const nickel_test = b.addSystemCommand(&.{ "nickel", "export", "--format", "raw", "_gen_test.ncl", "-I", "." });
+            nickel_test.cwd = "src/platforms/testing/tests";
+
+            const echo_tname = b.addSystemCommand(&.{ "echo", "TEST:", tname });
+            echo_tname.has_side_effects = true;
+
+            // TODO: Following commented line is not working (https://github.com/ziglang/zig/issues/17715)
+            //    nickel_test.has_side_effects = true;
+            // Oh well, for now:
+            nickel_test.extra_file_dependencies = &.{
+                "src/kirei/ncl/keymap.ncl",
+                "src/kirei/ncl/lib.ncl",
+                "src/kirei/ncl/zig.ncl",
+            };
+
+            nickel_test.addArg("-I");
+            nickel_test.addDirectoryArg(temp_ncl.getDirectory());
+            nickel_test.step.dependOn(&temp_ncl.step);
+
+            const exe = b.addExecutable(.{
+                .name = name,
+                .target = target,
+                .optimize = optimize,
+                .root_source_file = .{ .path = root_path },
+            });
+
+            exe.addModule("test", b.createModule(.{
+                .source_file = nickel_test.captureStdOut(),
+                .dependencies = &.{},
+            }));
+
+            addModules(exe, &common_module_names, &common_modules);
+
+            const run_test = b.addRunArtifact(exe);
+            run_test.step.dependOn(&echo_tname.step);
+            b.default_step.dependOn(&run_test.step);
+        }
+    } else {
+        const microzig_fw = if (platform == .rp2040)
+            microzig.addFirmware(b, .{
+                .name = name,
+                .target = rp2040.boards.raspberry_pi.pico,
+                .optimize = optimize,
+                .source_file = .{ .path = root_path },
+            })
+        else
+            null;
+
+        const exe = if (microzig_fw) |fw|
+            fw.artifact
+        else
+            b.addExecutable(.{
+                .name = name,
+                .target = target,
+                .optimize = optimize,
+                .root_source_file = .{ .path = root_path },
+            });
+
+        if (microzig_fw) |fw| {
+            fw.addAppDependency("kirei", kirei, .{});
+            fw.addAppDependency("common", common, .{});
+            fw.addAppDependency("umm", umm, .{});
+            fw.addAppDependency("uuid", uuid, .{});
+        }
+
+        addModules(exe, &common_module_names, &common_modules);
+
+        if (platform == .ch58x) {
+            const link_file_path = "src/platforms/ch58x/link.ld";
+            exe.setLinkerScriptPath(.{ .path = link_file_path });
+            exe.addAssemblyFile(.{ .path = "src/platforms/ch58x/startup.S" });
+
+            exe.addCSourceFiles(&.{
+                "src/platforms/ch58x/lib/libISP583.a",
+                "src/platforms/ch58x/lib/LIBCH58xBLE.a",
+                "src/platforms/ch58x/lib/calibration_lsi.c",
+            }, &.{});
+
+            exe.addIncludePath(.{ .path = "src/platforms/ch58x/lib" });
+        }
+
+        if (microzig_fw) |fw| {
+            microzig.installFirmware(b, fw, .{});
+        }
+
+        b.installArtifact(exe);
     }
+}
 
-    exe.addModule("kirei", kirei);
-    exe.addModule("common", common);
-    exe.addModule("umm", umm);
-    exe.addModule("uuid", uuid);
+fn addModules(cs: *std.build.Step.Compile, names: []const []const u8, modules: []const *std.build.Module) void {
+    std.debug.assert(names.len == modules.len);
 
-    if (platform == .ch58x) {
-        const link_file_path = "src/platforms/ch58x/link.ld";
-        exe.setLinkerScriptPath(.{ .path = link_file_path });
-        exe.addAssemblyFile(.{ .path = "src/platforms/ch58x/startup.S" });
-
-        exe.addCSourceFiles(&.{
-            "src/platforms/ch58x/lib/libISP583.a",
-            "src/platforms/ch58x/lib/LIBCH58xBLE.a",
-            "src/platforms/ch58x/lib/calibration_lsi.c",
-        }, &.{});
-
-        exe.addIncludePath(.{ .path = "src/platforms/ch58x/lib" });
+    for (names, modules) |name, module| {
+        cs.addModule(name, module);
     }
-
-    if (microzig_fw) |fw| {
-        microzig.installFirmware(b, fw, .{});
-    }
-
-    b.installArtifact(exe);
 }

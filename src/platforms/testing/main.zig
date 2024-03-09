@@ -165,4 +165,5 @@ pub fn main() !void {
     }
 
     process();
+    std.log.debug("PASS", .{});
 }
