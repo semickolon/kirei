@@ -1,7 +1,8 @@
 let imports = {
-    keymap = import "../../../kirei/ncl/keymap.ncl",
-    lib = import "../../../kirei/ncl/lib.ncl",
-    zig = import "../../../kirei/ncl/zig.ncl",
+    keymap = import "kirei/ncl/keymap.ncl",
+    lib = import "kirei/ncl/lib.ncl",
+    zig = import "kirei/ncl/zig.ncl",
+    utils = import "kirei/ncl/utils.ncl",
 } in
 
 let Uint = imports.zig.Uint in
@@ -50,14 +51,21 @@ let Test = {
             ralt = 64,
             rgui = 128,
         },
-        kc = {
-            A = 4,
-            B = 5,
-            C = 6,
-        },
+        kc = (import "kirei/ncl/codes.ncl")
+            |> std.array.slice 0 160 # 0x00 (incl) - 0xA0 (excl) 
+            |> imports.utils.array.enumerate
+            |> std.array.flat_map (fun {index, value} => std.array.map (fun name => { field = name, value = index }) value)
+            |> std.record.from_array,
     },
     report = fun mods' codes' => {
         mods = mods',
         codes = codes', 
+    },
+    toKeyMap = fun keys => {
+        key = keys
+            |> imports.utils.array.enumerate
+            |> std.array.map (fun {index, value} => { field = std.array.first value, "%{"value"}" = index })
+            |> std.record.from_array,
+        km = std.array.map (fun k => std.array.last k) keys,
     },
 }

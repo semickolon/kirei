@@ -92,7 +92,7 @@ pub fn build(b: *std.Build) void {
 
             const temp_ncl = b.addWriteFile("_test_suite.ncl", temp_ncl_contents);
 
-            const nickel_test = b.addSystemCommand(&.{ "nickel", "export", "--format", "raw", "_gen_test_suite.ncl", "-I", "." });
+            const nickel_test = b.addSystemCommand(&.{ "nickel", "export", "--format", "raw", "gen_test_suite.ncl", "-I", ".", "-I", b.pathFromRoot("src") });
             nickel_test.cwd = "src/platforms/testing/tests";
 
             const echo_tname = b.addSystemCommand(&.{ "echo", "TEST SUITE:", ts_name });

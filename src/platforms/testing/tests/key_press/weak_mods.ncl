@@ -1,25 +1,18 @@
-let { imports, step, event, codes, report, .. } = import "_base.ncl" in
+let { imports, step, event, codes, report, toKeyMap, .. } = import "base.ncl" in
 let { lit, key-press, kc, mod, mod-weak, .. } = imports.lib in
 
 let md = codes.mod in
 let c = codes.kc in
 
-let key = {
-    weak_lsft = 0,
-    weak_rctl = 1,
-    a = 2,
-    weak_lsft_b = 3,
-    ralt_c = 4,
-    weak_rgui_a = 5,
-} in
-
-let km = [
-    lit (key-press (mod-weak 'shift 'left)),
-    lit (key-press (mod-weak 'ctrl 'right)),
-    lit (key-press kc.A),
-    lit (key-press (kc.B & mod-weak 'shift 'left)),
-    lit (key-press (kc.C & mod 'alt 'right)),
-    lit (key-press (kc.A & mod 'gui 'right)),
+let { km, key } = toKeyMap [
+    ["weak_lsft",       lit (key-press (mod-weak 'shift 'left))],
+    ["weak_rctl",       lit (key-press (mod-weak 'ctrl 'right))],
+    ["a",               lit (key-press kc.A)],
+    ["weak_lsft_b",     lit (key-press (kc.B & mod-weak 'shift 'left))],
+    ["ralt_c",          lit (key-press (kc.C & mod 'alt 'right))],
+    ["weak_rgui_a",     lit (key-press (kc.A & mod 'gui 'right))],
+    ["ka0",             lit (key-press kc.KA0)],
+    ["weak_lalt_ka1",   lit (key-press (kc.KA1 & mod-weak 'alt 'left))],
 ] in
 
 {
@@ -110,6 +103,50 @@ let km = [
                 report (md.lsft) [],
                 report (md.lsft + md.rctl) [],
                 report (md.lsft + md.rctl) [c.A],
+                report 0 [],
+            ],
+        },
+        {
+            name = "unbound weak mods cannot be bound to non-hid keyboard codes",
+            steps = step.press key.weak_lsft
+                @ step.tap key.ka0
+                @ step.tap key.a,
+            expected = [
+                report (md.lsft) [],
+                report (md.lsft) [c.A],
+                report 0 [],
+            ],
+        },
+        {
+            name = "weak mods 'bound' to non-hid keyboard codes are not really bound",
+            steps = step.press key.weak_lalt_ka1
+                @ step.tap key.a,
+            expected = [
+                report (md.lalt) [],
+                report (md.lalt) [c.A],
+                report 0 [],
+            ],
+        },
+        {
+            name = "weak mods 'bound' to non-hid keyboard codes do stack",
+            steps = step.press key.weak_lalt_ka1
+                @ step.press key.weak_lsft
+                @ step.tap key.ralt_c,
+            expected = [
+                report (md.lalt) [],
+                report (md.lalt + md.lsft) [],
+                report (md.lalt + md.lsft + md.ralt) [c.C],
+                report 0 [],
+            ],
+        },
+        {
+            name = "released weak mods 'bound' to non-hid keyboard codes no longer bind",
+            steps = step.tap key.weak_lalt_ka1
+                @ step.tap key.a,
+            expected = [
+                report (md.lalt) [],
+                report 0 [],
+                report 0 [c.A],
                 report 0 [],
             ],
         },

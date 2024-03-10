@@ -1,3 +1,5 @@
+let utils = import "utils.ncl" in
+
 let rec lib = {
     lit = fun value => {
         tag = 'literal,
@@ -44,16 +46,10 @@ let rec lib = {
         data = { key_group = kg },
     },
 
-    kc = {
-        A = { key_code = 4 },
-        B = { key_code = 5 },
-        C = { key_code = 6 },
-        D = { key_code = 7 },
-        E = { key_code = 8 },
-        F = { key_code = 9 },
-        G = { key_code = 10 },
-        H = { key_code = 11 },
-    },
+    kc = (import "codes.ncl")
+        |> utils.array.enumerate
+        |> std.array.flat_map (fun {index, value} => std.array.map (fun name => { field = name, value = { key_code = index } }) value)
+        |> std.record.from_array,
 
     mod-base = fun name side' retention anti => {
         mods."%{std.to_string name}" = {
