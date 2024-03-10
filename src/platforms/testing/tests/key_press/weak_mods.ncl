@@ -8,11 +8,13 @@ let { km, key } = toKeyMap [
     ["weak_lsft",       lit (key-press (mod-weak 'shift 'left))],
     ["weak_rctl",       lit (key-press (mod-weak 'ctrl 'right))],
     ["a",               lit (key-press kc.A)],
+    ["b",               lit (key-press kc.B)],
     ["weak_lsft_b",     lit (key-press (kc.B & mod-weak 'shift 'left))],
     ["ralt_c",          lit (key-press (kc.C & mod 'alt 'right))],
     ["weak_rgui_a",     lit (key-press (kc.A & mod 'gui 'right))],
     ["ka0",             lit (key-press kc.KA0)],
     ["weak_lalt_ka1",   lit (key-press (kc.KA1 & mod-weak 'alt 'left))],
+    ["rsft",            lit (key-press (mod 'shift 'right))],
 ] in
 
 {
@@ -20,10 +22,8 @@ let { km, key } = toKeyMap [
     tests = [
         {
             name = "check all keys",
-            steps = step.tap key.weak_lsft
-                @ step.tap key.weak_rctl
-                @ step.tap key.a
-                @ step.tap key.weak_lsft_b,
+            steps = std.array.range 0 (std.array.length km)
+                |> std.array.flat_map (fun i => step.tap i),
             expected = [
                 report (md.lsft) [],
                 report 0 [],
@@ -31,7 +31,17 @@ let { km, key } = toKeyMap [
                 report 0 [],
                 report 0 [c.A],
                 report 0 [],
+                report 0 [c.B],
+                report 0 [],
                 report (md.lsft) [c.B],
+                report 0 [],
+                report (md.ralt) [c.C],
+                report 0 [],
+                report (md.rgui) [c.A],
+                report 0 [],
+                report (md.lalt) [],
+                report 0 [],
+                report (md.rsft) [],
                 report 0 [],
             ],
         },
@@ -46,6 +56,31 @@ let { km, key } = toKeyMap [
                 report (md.ralt) [c.B, c.C],
                 report (md.ralt) [c.C],
                 report 0 [],
+            ],
+        },
+        {
+            name = "bound weak mods do not unregister on next key group without code",
+            steps = step.press key.weak_lsft_b
+                @ step.press key.rsft
+                @ step.tap key.a,
+            expected = [
+                report (md.lsft) [c.B],
+                report (md.lsft + md.rsft) [c.B],
+                report (md.rsft) [c.B, c.A],
+                report (md.rsft) [c.B],
+            ],
+        },
+        {
+            name = "unbound weak mods do not bind to already pressed keys",
+            steps = step.press key.a
+                @ step.press key.weak_rctl
+                @ step.press key.weak_lsft_b
+                @ step.release key.ralt_c,
+            expected = [
+                report 0 [c.A],
+                report (md.rctl) [c.A],
+                report (md.rctl + md.lsft) [c.A, c.B],
+                report (md.ralt) [c.A, c.B, c.C],
             ],
         },
         {
@@ -114,6 +149,31 @@ let { km, key } = toKeyMap [
             expected = [
                 report (md.lsft) [],
                 report (md.lsft) [c.A],
+                report 0 [],
+            ],
+        },
+        {
+            name = "bound weak mods cannot be unregistered by non-hid keyboard codes",
+            steps = step.press key.weak_lsft_b
+                @ step.tap key.ka0
+                @ step.press key.weak_lalt_ka1
+                @ step.tap key.ka0,
+            expected = [
+                report (md.lsft) [c.B],
+                report (md.lsft + md.lalt) [c.B],
+            ],
+        },
+        {
+            name = "bound weak mods do not unregister on press of same binding",
+            steps = step.press key.weak_lsft_b
+                @ step.press key.b
+                @ step.tap key.a
+                @ step.release key.weak_lsft_b
+                @ step.release key.b,
+            expected = [
+                report (md.lsft) [c.B],
+                report 0 [c.B, c.A],
+                report 0 [c.B],
                 report 0 [],
             ],
         },

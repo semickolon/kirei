@@ -21,7 +21,7 @@ normal_mods: u8 = 0,
 weak_mods: u8 = 0,
 normal_anti_mods: u8 = 0,
 weak_anti_mods: u8 = 0,
-weak_mods_late_binding: u8 = 0,
+weak_mods_binding: u8 = 0,
 
 state_a: std.StaticBitSet(32) = std.StaticBitSet(32).initEmpty(),
 
@@ -95,6 +95,10 @@ fn isAnyHidKeyboardCodePressed(self: OutputHid) bool {
     return false;
 }
 
+fn hasWeakMods(self: OutputHid) bool {
+    return (self.weak_mods | self.weak_anti_mods) != 0;
+}
+
 pub fn pushKeyGroup(self: *OutputHid, key_group: KeyGroup, down: bool) void {
     if (self.is_report_dirty) {
         self.report_queue.append(self.report) catch @panic("OutputHid report queue overflow.");
@@ -107,13 +111,16 @@ pub fn pushKeyGroup(self: *OutputHid, key_group: KeyGroup, down: bool) void {
     { // Mods
         const report_mods = &self.report[0];
 
-        if ((self.weak_mods | self.weak_anti_mods) != 0 and kc_info.kind == .hid_keyboard_code) {
-            if ((down and self.isAnyHidKeyboardCodePressed()) or (!down and self.weak_mods_late_binding == kc_info.id)) {
+        if (self.hasWeakMods() and kc_info.kind == .hid_keyboard_code) {
+            const has_binding = self.weak_mods_binding != 0;
+            const is_bound_to_key_code = self.weak_mods_binding == kc_info.id;
+
+            if (has_binding and (if (down) !is_bound_to_key_code else is_bound_to_key_code)) {
                 self.weak_mods = 0;
                 self.weak_anti_mods = 0;
-                self.weak_mods_late_binding = 0;
+                self.weak_mods_binding = 0;
             } else if (down) {
-                self.weak_mods_late_binding = kc_info.id;
+                self.weak_mods_binding = kc_info.id;
             }
         }
 
@@ -166,6 +173,10 @@ pub fn pushKeyGroup(self: *OutputHid, key_group: KeyGroup, down: bool) void {
                 if (report_codes[i] != new_code) {
                     report_codes[i] = new_code;
                     self.is_report_dirty = true;
+
+                    if (down and self.hasWeakMods()) {
+                        self.weak_mods_binding = new_code;
+                    }
                 }
             } else if (down) {
                 @panic("Unhandled case: No more HID report space."); // TODO

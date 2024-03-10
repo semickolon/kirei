@@ -16,10 +16,8 @@ let km = [
     tests = [
         {
             name = "check all keys",
-            steps = step.tap 0
-                @ step.tap 1
-                @ step.tap 2
-                @ step.tap 3,
+            steps = std.array.range 0 (std.array.length km)
+                |> std.array.flat_map (fun i => step.tap i),
             expected = [
                 report (md.lctl) [c.A],
                 report 0 [],
