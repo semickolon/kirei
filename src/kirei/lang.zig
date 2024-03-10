@@ -153,11 +153,13 @@ pub const Condition = union(enum) {
 pub const Query = union(enum) {
     is_pressed: KeyPattern,
     is_key_pressed: KeyIndex,
+    is_key_code_pressed: KeyIndex,
 
     pub fn resolve(self: Query, engine: *const Engine) bool {
         switch (self) {
             .is_pressed => |pattern| return engine.output_hid.matches(pattern),
             .is_key_pressed => |key_idx| return engine.isKeyPressed(key_idx),
+            .is_key_code_pressed => |key_code| return engine.output_hid.isKeyCodePressed(key_code),
         }
     }
 
@@ -171,6 +173,7 @@ pub const Query = union(enum) {
                 switch (self) {
                     .is_pressed => |pattern| return engine.output_hid.matches(pattern),
                     .is_key_pressed => |key_idx| return engine.isKeyPressed(key_idx),
+                    .is_key_code_pressed => |key_code| return engine.output_hid.isKeyCodePressed(key_code),
                 }
             }
         };

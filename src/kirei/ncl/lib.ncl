@@ -39,6 +39,10 @@ let rec lib = {
         data = { tag = tag', data = data' },
     },
 
+    is-key-code-pressed = fun key_code =>
+        let kc = if std.is_record key_code then key_code.key_code else key_code in
+        query 'is_key_code_pressed kc,
+    
     is-key-pressed = fun key_index => query 'is_key_pressed key_index,
 
     key-press = fun kg => {

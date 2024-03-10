@@ -45,10 +45,11 @@ let rec lang = {
         }),
     
     Query = TaggedUnion
-        [| 'is_pressed, 'is_key_pressed |]
+        [| 'is_pressed, 'is_key_pressed, 'is_key_code_pressed |]
         (match {
             'is_pressed => KeyPattern,
             'is_key_pressed => KeyIndex,
+            'is_key_code_pressed => KeyCode,
         }),
 } in
 
