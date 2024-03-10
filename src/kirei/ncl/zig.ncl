@@ -7,7 +7,7 @@ let rec toIrZon = fun e =>
         else if std.record.has_field "_ptr" e then
             { _ptr = toIrZon e.value }
         else if std.record.has_field "_void" e then
-            "{}"
+            { _void = true }
         else
             std.record.map_values toIrZon e
     else if std.is_array e then
@@ -23,6 +23,8 @@ let rec toZon = fun e =>
             "&%{toZon e._slice}"
         else if std.record.has_field "_ptr" e then
             "&%{toZon e._ptr}"
+        else if std.record.has_field "_void" e then
+            "{}"
         else
             let inner = 
                 std.record.to_array e

@@ -22,6 +22,7 @@ weak_mods: u8 = 0,
 normal_anti_mods: u8 = 0,
 weak_anti_mods: u8 = 0,
 weak_mods_binding: u8 = 0,
+current_hid_keyboard_code: u8 = 0,
 
 state_a: std.StaticBitSet(32) = std.StaticBitSet(32).initEmpty(),
 
@@ -34,52 +35,78 @@ pub const KeyRecord = packed struct(u64) {
     __pad1: u12,
     time: engine.TimeMillis,
     __pad2: u16,
-
-    pub fn matches(self: KeyRecord, pattern: KeyPattern) bool {
-        return pattern.matches(self.key_code, self.mods);
-    }
 };
 
-pub const KeyPattern = struct {
-    mods: [8]ModifierNecessity = [_]ModifierNecessity{.unwanted} ** 8,
-    key_code: KeyCodePattern,
+pub const HidKeyboardPattern = struct {
+    mods: [4]ModifierPattern = [_]ModifierPattern{.{ .independent = .{} }} ** 4,
+    code: CodePattern,
 
-    pub const ModifierNecessity = enum { unwanted, required, optional };
+    pub const Necessity = enum { unwanted, required, optional };
 
-    pub const KeyCodePattern = union(enum) {
-        none: void,
-        exact: KeyCode,
-        range: struct { from: KeyCode, to: KeyCode },
+    pub const ModifierPattern = union(enum) {
+        either: void,
+        xor: void,
+        independent: struct {
+            left: Necessity = .unwanted,
+            right: Necessity = .unwanted,
+        },
     };
 
-    pub fn matchesKeyCode(self: KeyPattern, key_code: KeyCode) bool {
-        return switch (self) {
-            .none => true,
-            .exact => |kc| kc == key_code,
-            .range => |range| range.from >= key_code and range.to <= key_code,
+    pub const CodePattern = union(enum) {
+        any: Necessity,
+        exact: u8,
+        range: struct { from: u8, to: u8 },
+    };
+
+    pub fn matchesCode(self: HidKeyboardPattern, code: KeyCode) bool {
+        return switch (self.code) {
+            .any => |necessity| switch (necessity) {
+                .unwanted => code == 0,
+                .required => code != 0,
+                .optional => true,
+            },
+            .exact => |c| c == code,
+            .range => |range| range.from <= code and code <= range.to,
         };
     }
 
-    pub fn matchesMods(self: KeyPattern, mods: u8) bool {
-        var optional_mods: u8 = 0;
-        var exact_mods: u8 = 0;
-        var mask: u8 = 1;
+    pub fn matchesMods(self: HidKeyboardPattern, mods: u8) bool {
+        var mask_both: u8 = 0x11;
 
-        for (self.mods) |mod| {
-            switch (mod) {
-                .optional => optional_mods |= mask,
-                .required => exact_mods |= mask,
-                .unwanted => {},
+        for (self.mods) |pattern| {
+            const mask_left = mask_both & 0x0F;
+            const mask_right = mask_both & 0xF0;
+            const mods_masked_both = mods & mask_both;
+
+            switch (pattern) {
+                .either => {
+                    if (mods_masked_both == 0)
+                        return false;
+                },
+                .xor => {
+                    if (mods_masked_both != mask_left and mods_masked_both != mask_right)
+                        return false;
+                },
+                .independent => |ind| {
+                    const left_down = (mods & mask_left) != 0;
+                    const right_down = (mods & mask_right) != 0;
+
+                    if ((ind.left == .unwanted and left_down) or (ind.left == .required and !left_down))
+                        return false;
+
+                    if ((ind.right == .unwanted and right_down) or (ind.right == .required and !right_down))
+                        return false;
+                },
             }
 
-            mask <<= 1;
+            mask_both <<= 1;
         }
 
-        return (mods & ~optional_mods) == exact_mods;
+        return true;
     }
 
-    pub fn matches(self: KeyPattern, key_code: KeyCode, mods: u8) bool {
-        return self.matchesKeyCode(key_code) and self.matchesMods(mods);
+    pub fn matches(self: HidKeyboardPattern, mods: u8, code: KeyCode) bool {
+        return self.matchesMods(mods) and self.matchesCode(code);
     }
 };
 
@@ -162,6 +189,12 @@ pub fn pushKeyGroup(self: *OutputHid, key_group: KeyGroup, down: bool) void {
                     report_codes[i] = new_code;
                     self.is_report_dirty = true;
 
+                    if (down) {
+                        self.current_hid_keyboard_code = hid_code;
+                    } else if (!down and self.current_hid_keyboard_code == hid_code) {
+                        self.current_hid_keyboard_code = 0;
+                    }
+
                     if (down and self.hasWeakMods()) {
                         self.weak_mods_binding = new_code;
                     }
@@ -200,9 +233,19 @@ pub fn sendReports(self: *OutputHid) void {
     }
 }
 
+// TODO: Unused right now. Would be useful as a query.
 fn isAnyHidKeyboardCodePressed(self: OutputHid) bool {
     for (self.report[2..]) |code| {
         if (code != 0)
+            return true;
+    }
+    return false;
+}
+
+// TODO: Unused right now. Would be useful as a query.
+fn isAnyHidKeyboardCodeInRangePressed(self: OutputHid, from_incl: u8, to_incl: u8) bool {
+    for (self.report[2..]) |code| {
+        if (code != 0 and from_incl >= code and code <= to_incl)
             return true;
     }
     return false;
@@ -259,14 +302,6 @@ pub fn getModsOfProps(self: OutputHid, props: KeyGroup.Props) u8 {
     };
 }
 
-pub fn matches(self: OutputHid, pattern: KeyPattern) bool {
-    const key_code_matches = switch (pattern.key_code) {
-        .none => true,
-        .exact => |kc| self.isKeyCodePressed(kc),
-        .range => |range| for (range.from..range.to) |kc| {
-            if (self.isKeyCodePressed(@truncate(kc))) break true;
-        } else false,
-    };
-
-    return key_code_matches and pattern.matchesMods(self.report[0]);
+pub fn matches(self: OutputHid, pattern: HidKeyboardPattern) bool {
+    return pattern.matches(self.report[0], self.current_hid_keyboard_code);
 }

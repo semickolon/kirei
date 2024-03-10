@@ -10,6 +10,7 @@ const all_test_names = [_][]const u8{
     "conditionals/layers",
     "conditionals/is_key_pressed",
     "conditionals/mod_morph",
+    "conditionals/is_pressed",
 };
 
 pub fn build(b: *std.Build) void {

@@ -160,14 +160,14 @@
     ["RETURN", "RETN"],
     ["SEPARATOR", "SEPR"], # 0x9F
 ] @ (std.array.replicate 64 []) @ [
-    ["LCTL"], # 0xE0
-    ["LSFT"],
-    ["LALT"],
-    ["LGUI"],
-    ["RCTL"],
-    ["RSFT"],
-    ["RALT"],
-    ["RGUI"],
+    ["LEFT_CTRL", "LCTRL", "LCTL"], # 0xE0
+    ["LEFT_SHIFT", "LSHIFT", "LSFT"],
+    ["LEFT_ALT", "LALT"],
+    ["LEFT_GUI", "LGUI"],
+    ["RIGHT_CTRL", "RCTRL", "RCTL"],
+    ["RIGHT_SHIFT", "RSHIFT", "RSFT"],
+    ["RIGHT_ALT", "RALT"],
+    ["RIGHT_GUI", "RGUI"],
     # Kirei-space
     ["KA0"], # 0xE9
     ["KA1"],

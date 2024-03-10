@@ -39,6 +39,7 @@ let Test = {
         wait = fun ms => [{ tag = 'wait, data = ms }],
         tap = fun i => (press i) @ (release i),
         tap-ms = fun i ms => (press i) @ (wait ms) @ (release i),
+        repress = fun i => (release i) @ (press i),
     } in step',
     codes = {
         mod = {

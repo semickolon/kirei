@@ -5,7 +5,7 @@ const output_hid = @import("output_hid.zig");
 const Engine = eng.Engine;
 const KeyIndex = eng.KeyIndex;
 const KeyCode = keymap.KeyCode;
-const KeyPattern = output_hid.KeyPattern;
+const HidKeyboardPattern = output_hid.HidKeyboardPattern;
 
 // TODO: Fix duplication of resolution code. Unify runtime and compile-time.
 
@@ -151,7 +151,7 @@ pub const Condition = union(enum) {
 };
 
 pub const Query = union(enum) {
-    is_pressed: KeyPattern,
+    is_pressed: HidKeyboardPattern,
     is_key_pressed: KeyIndex,
     is_key_code_pressed: KeyIndex,
 

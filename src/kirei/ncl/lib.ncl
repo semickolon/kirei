@@ -1,4 +1,5 @@
 let utils = import "utils.ncl" in
+let { toHidKeyboardPattern, .. } = import "output_hid.ncl" in
 
 let rec lib = {
     lit = fun value => {
@@ -44,6 +45,8 @@ let rec lib = {
         query 'is_key_code_pressed kc,
     
     is-key-pressed = fun key_index => query 'is_key_pressed key_index,
+
+    is-pressed = fun str e => query 'is_pressed (toHidKeyboardPattern str e),
 
     key-press = fun kg => {
         tag = 'key_press,

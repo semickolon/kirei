@@ -1,20 +1,8 @@
 let { Uint, TaggedUnion, FixedArray, Ptr, Void, zonify, .. } = import "zig.ncl" in
+let { HidKeyboardPattern, .. } = import "output_hid.ncl" in
 
 let KeyCode = Uint 12 in
 let KeyIndex = Uint 8 in
-
-let ModifierNecessity = [| 'unwanted, 'required, '"optional" |] in
-
-let KeyPattern = {
-    mods | FixedArray 8 ModifierNecessity | default = { array = std.array.replicate 8 'unwanted },
-    key_code = TaggedUnion
-        [| 'none, 'exact, 'range |]
-        (match {
-            'none => {},
-            'exact => KeyCode,
-            'range => { from | KeyCode, to | KeyCode },
-        }),
-} in
 
 let rec lang = {
     Expression = fun T => TaggedUnion
@@ -47,7 +35,7 @@ let rec lang = {
     Query = TaggedUnion
         [| 'is_pressed, 'is_key_pressed, 'is_key_code_pressed |]
         (match {
-            'is_pressed => KeyPattern,
+            'is_pressed => HidKeyboardPattern,
             'is_key_pressed => KeyIndex,
             'is_key_code_pressed => KeyCode,
         }),
