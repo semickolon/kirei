@@ -1,0 +1,26 @@
+name: Run tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  run_platform_tests:
+    name: Run testing platform tests
+    runs-on: ubuntu-22.04
+    steps:
+      - name: git checkout
+        uses: actions/checkout@v3
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Check Nixpkgs inputs
+        uses: DeterminateSystems/flake-checker-action@main
+        with:
+          fail-mode: true
+
+      # Nix-specific logic begins here
+      - name: Run tests
+        run: |
+          nix develop --command \
+            zig build -Dplatform=testing -j1
