@@ -144,8 +144,9 @@ pub fn main() !void {
             test_suite.key_map,
         );
 
-        for (@"test".steps) |step| {
+        for (@"test".steps, 0..) |step, step_idx| {
             process();
+            std.log.debug("{d}: {any}", .{ step_idx, step });
 
             if (step.do()) |wait_until| {
                 while (scheduler.getTimeMillis() < wait_until) {
@@ -155,6 +156,12 @@ pub fn main() !void {
         }
 
         process();
+
+        if (expected_report_idx != @"test".expected.len) {
+            std.log.err("Expecting {d} reports, got {d} only.", .{ @"test".expected.len, expected_report_idx });
+            @panic("Expected reports not exhausted.");
+        }
+
         std.log.info("PASS", .{});
     }
 }

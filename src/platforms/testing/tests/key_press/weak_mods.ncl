@@ -75,7 +75,7 @@ let { km, key } = toKeyMap [
             steps = step.press key.a
                 @ step.press key.weak_rctl
                 @ step.press key.weak_lsft_b
-                @ step.release key.ralt_c,
+                @ step.press key.ralt_c,
             expected = [
                 report 0 [c.A],
                 report (md.rctl) [c.A],

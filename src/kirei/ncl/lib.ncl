@@ -46,6 +46,11 @@ let rec lib = {
         data = { key_group = kg },
     },
 
+    key-toggle = fun kg => {
+        tag = 'key_toggle,
+        data = { key_group = kg },
+    },
+
     kc = (import "codes.ncl")
         |> utils.array.enumerate
         |> std.array.flat_map (fun {index, value} => std.array.map (fun name => { field = name, value = { key_code = index } }) value)

@@ -6,6 +6,7 @@ const all_test_names = [_][]const u8{
     "key_press/mods",
     "key_press/weak_mods",
     "key_press/anti_mods",
+    "key_toggle/simple",
 };
 
 pub fn build(b: *std.Build) void {

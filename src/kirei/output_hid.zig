@@ -87,18 +87,6 @@ pub fn init(impl: engine.Implementation) OutputHid {
     return .{ .impl = impl };
 }
 
-fn isAnyHidKeyboardCodePressed(self: OutputHid) bool {
-    for (self.report[2..]) |code| {
-        if (code != 0)
-            return true;
-    }
-    return false;
-}
-
-fn hasWeakMods(self: OutputHid) bool {
-    return (self.weak_mods | self.weak_anti_mods) != 0;
-}
-
 pub fn pushKeyGroup(self: *OutputHid, key_group: KeyGroup, down: bool) void {
     if (self.is_report_dirty) {
         self.report_queue.append(self.report) catch @panic("OutputHid report queue overflow.");
@@ -212,6 +200,18 @@ pub fn sendReports(self: *OutputHid) void {
     }
 }
 
+fn isAnyHidKeyboardCodePressed(self: OutputHid) bool {
+    for (self.report[2..]) |code| {
+        if (code != 0)
+            return true;
+    }
+    return false;
+}
+
+fn hasWeakMods(self: OutputHid) bool {
+    return (self.weak_mods | self.weak_anti_mods) != 0;
+}
+
 pub fn isKeyCodePressed(self: OutputHid, key_code: KeyCode) bool {
     const kc_info = keymap.keyCodeInfo(key_code);
 
@@ -233,6 +233,30 @@ pub fn isKeyCodePressed(self: OutputHid, key_code: KeyCode) bool {
         },
         .reserved => return false,
     }
+}
+
+pub fn isKeyGroupPressed(self: OutputHid, key_group: KeyGroup) bool {
+    const kc = key_group.key_code;
+    if (kc != 0 and !self.isKeyCodePressed(kc))
+        return false;
+
+    inline for (.{ "ctrl", "shift", "alt", "gui" }, 0..) |mod_name, i| {
+        const mod: KeyGroup.Modifier = @field(key_group.mods, mod_name);
+        const mods = self.getModsOfProps(mod.props);
+        const mask = mod.mask(@truncate(i));
+
+        if ((mods & mask) != mask)
+            return false;
+    }
+
+    return true;
+}
+
+pub fn getModsOfProps(self: OutputHid, props: KeyGroup.Props) u8 {
+    return switch (props.retention) {
+        .normal => if (props.anti) self.normal_anti_mods else self.normal_mods,
+        .weak => if (props.anti) self.weak_anti_mods else self.weak_mods,
+    };
 }
 
 pub fn matches(self: OutputHid, pattern: KeyPattern) bool {

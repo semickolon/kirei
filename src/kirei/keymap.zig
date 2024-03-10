@@ -60,6 +60,15 @@ pub const KeyGroup = packed struct(u32) {
     pub const Modifier = packed struct(u4) {
         side: enum(u2) { none, left, right, both } = .none,
         props: Props = .{},
+
+        pub fn mask(self: Modifier, shift: u2) u8 {
+            return @as(u8, switch (self.side) {
+                .none => 0x00,
+                .left => 0x01,
+                .right => 0x10,
+                .both => 0x11,
+            }) << shift;
+        }
     };
 
     pub const Props = packed struct(u2) {
@@ -74,12 +83,7 @@ pub const KeyGroup = packed struct(u32) {
 
         inline for (.{ self.mods.ctrl, self.mods.shift, self.mods.alt, self.mods.gui }, 0..) |mod, i| {
             if (mod.props.retention == retention and mod.props.anti == anti) {
-                byte |= switch (mod.side) {
-                    .none => 0,
-                    .left => (0x01 << i),
-                    .right => (0x10 << i),
-                    .both => (0x11 << i),
-                };
+                byte |= mod.mask(@truncate(i));
             }
         }
 
@@ -186,7 +190,7 @@ pub const KeyToggleBehavior = struct {
 
     pub fn process(self: KeyToggleBehavior, engine: *Engine, down: bool) bool {
         if (down) {
-            const toggle_down = !engine.output_hid.isKeyCodePressed(self.key_group.key_code);
+            const toggle_down = !engine.output_hid.isKeyGroupPressed(self.key_group);
 
             if (self.hooks) |h| {
                 if (toggle_down) h.on_toggle_down.execute(engine);

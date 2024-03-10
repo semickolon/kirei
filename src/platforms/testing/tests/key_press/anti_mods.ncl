@@ -79,5 +79,17 @@ let { km, key } = toKeyMap [
                 report (md.lsft + md.rsft + md.lctl + md.rctl) [c.A, c.X],
             ],
         },
+        {
+            name = "unbound weak anti-mods work",
+            steps = step.press key.wk_anti_lsft
+                @ step.tap key.lsft_a
+                @ step.tap key.lsft_a,
+            expected = [
+                report 0 [c.A],
+                report 0 [],
+                report (md.lsft) [c.A],
+                report 0 [],
+            ],
+        },
     ],
 }
