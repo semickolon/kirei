@@ -159,7 +159,7 @@
     ["PRIOR", "PRIR"],
     ["RETURN", "RETN"],
     ["SEPARATOR", "SEPR"], # 0x9F
-] @ (std.array.replicate 65 []) @ [
+] @ (std.array.replicate 64 []) @ [
     ["LCTL"], # 0xE0
     ["LSFT"],
     ["LALT"],
