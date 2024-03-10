@@ -7,6 +7,7 @@ let c = codes.kc in
 let km = [
     lit (key-press kc.A),
     lit (key-press kc.B),
+    lit (key-press kc.A),
 ] in
 
 {
@@ -52,6 +53,18 @@ let km = [
             expected = [
                 report 0 [c.A],
                 report 0 [c.A, c.B],
+                report 0 [c.A],
+                report 0 [],
+            ],
+        },
+        {
+            # This behavior may change in the future
+            name = "pressing the same code does nothing",
+            steps = step.press 0
+                @ step.press 2
+                @ step.release 2
+                @ step.release 0,
+            expected = [
                 report 0 [c.A],
                 report 0 [],
             ],

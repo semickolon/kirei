@@ -161,8 +161,12 @@ pub fn pushKeyGroup(self: *OutputHid, key_group: KeyGroup, down: bool) void {
             }
 
             if (idx) |i| {
-                report_codes[i] = if (down) hid_code else 0;
-                self.is_report_dirty = true;
+                const new_code = if (down) hid_code else 0;
+
+                if (report_codes[i] != new_code) {
+                    report_codes[i] = new_code;
+                    self.is_report_dirty = true;
+                }
             } else if (down) {
                 @panic("Unhandled case: No more HID report space."); // TODO
             }
