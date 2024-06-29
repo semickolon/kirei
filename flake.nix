@@ -28,7 +28,7 @@
             };
           in
           with pkgs; [
-            zig
+            zig_0_11
             zls
             nickel
             nls
