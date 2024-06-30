@@ -1,4 +1,4 @@
-let { imports, step, event, codes, report, toKeyMap, .. } = import "base.ncl" in
+let { imports, step, codes, report, toKeyMap, .. } = import "base.ncl" in
 let { lit, switch, case, key-press, kc, is-key-pressed, not, or, and, .. } = imports.lib in
 
 let md = codes.mod in
